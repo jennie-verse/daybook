@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync, existsSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+const root=join(dirname(fileURLToPath(import.meta.url)),'..'); const read=file=>readFileSync(join(root,file),'utf8');
+test('only the eight approved apps are queried',()=>{const app=read('src/app.js');for(const name of ['tide','focus','loom','petal','folio','quill','slate','grove'])assert.match(app,new RegExp(`'${name}'`));for(const name of ['vault','trace','atlas','shared'])assert.doesNotMatch(app,new RegExp(`'${name}'`));});
+test('the app reads projections and never another app IndexedDB',()=>{const app=read('src/app.js');assert.match(app,/journal\/activity/);assert.doesNotMatch(app,/indexedDB/);assert.doesNotMatch(app,/events\//);});
+test('PWA shell, icon, and registration exist',()=>{for(const file of ['index.html','assets/app.css','src/app.js','sw.js','manifest.webmanifest','icons/icon.svg'])assert.ok(existsSync(join(root,file)));assert.match(read('index.html'),/serviceWorker\.register/);});
+test('Markdown has a private note and activity summaries',()=>{const app=read('src/app.js');const html=read('index.html');assert.match(html,/Copy Markdown/);assert.match(html,/Download Markdown/);assert.match(app,/## Note/);});

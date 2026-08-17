@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en"><head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#fff7f5">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://api.github.com; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'">
+  <link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icons/icon.svg"><link rel="stylesheet" href="./assets/app.css"><title>Daybook</title>
+</head><body><main>
+  <header><p>DAYBOOK</p><h1 id="date-title">Today</h1><button id="settings">Settings</button></header>
+  <section id="state" role="status">Connect a GitHub token in Settings to load your private journal.</section>
+  <section id="timeline" aria-label="Daily timeline"></section>
+  <section id="note"><h2>Daily note</h2><textarea id="note-text" placeholder="A private note for this day"></textarea><div><button id="copy">Copy Markdown</button><button id="download">Download Markdown</button></div></section>
+</main><dialog id="settings-dialog"><form method="dialog"><h2>Daybook settings</h2><label>GitHub token<input id="token" type="password" autocomplete="off" placeholder="Paste token to replace saved one"></label><label>Journal device name<input id="context" autocomplete="off" placeholder="e.g. iphone-home"></label><label>Date<input id="date" type="date"></label><p id="settings-status">Token and note stay on this device. Daybook only reads journal projections.</p><menu><button value="cancel">Close</button><button id="save-settings" value="default">Save & load</button></menu></form></dialog><script type="module" src="./src/app.js"></script><script>if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js')</script></body></html>
