@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#fdf7f8">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://api.github.com; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://api.github.com; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icons/icon-192.png">
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
@@ -30,7 +30,10 @@
         </div>
         <div class="freshness-row">
           <span id="freshness">Not refreshed yet</span>
-          <button class="text-button" id="refresh-button">Refresh</button>
+          <div class="freshness-actions">
+            <button class="text-button" id="refresh-button">Refresh</button>
+            <button class="text-button settings-button" id="open-settings-compact" aria-haspopup="dialog">Settings</button>
+          </div>
         </div>
       </header>
       <div id="connection-state" class="state-banner" role="status" aria-live="polite"></div>

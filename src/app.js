@@ -17,8 +17,10 @@ const makeContext = (label) => {
   return `${slug}-${suffix}`;
 };
 const emptyDay = (date) => ({ date, apps: Object.fromEntries(SOURCE_APPS.map(({ id }) => [id, []])), records: [], failures: [], diagnostics: [], cached: false });
+const isDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value) && value <= today();
+const rememberedDate = () => { const saved = read('daybook.date', ''); return isDate(saved) ? saved : today(); };
 const state = {
-  date: read('daybook.date', today()), view: read('daybook.view', 'by-app'), token: read('sync.token.v1'), context: read('daybook.context'),
+  date: rememberedDate(), view: read('daybook.view', 'by-app'), token: read('sync.token.v1'), context: read('daybook.context'),
   textSize: read('daybook.textSize', '12'), markdownDetail: read('daybook.markdownDetail', 'full'), day: null, note: '', statuses: {}, availability: new Map(), refreshing: false,
 };
 let noteTimer = null; let composing = false; let toastTimer = null;
@@ -104,7 +106,23 @@ async function changeDate(date) { if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date 
 function shiftDay(amount) { const date = new Date(`${state.date}T12:00:00`); date.setDate(date.getDate() + amount); changeDate(localDate(date)); }
 function setView(view) { state.view = view; write('daybook.view', view); render(); }
 async function persistNote() {
-  state.note = $('note-text').value.normalize('NFC'); await saveLocalNote(state.date, state.note); $('note-status').textContent = 'Saved on this device · waiting to sync'; clearTimeout(noteTimer); noteTimer = setTimeout(async () => { try { if (await flushNote(state.date, state.token, state.context)) $('note-status').textContent = 'Synced privately'; } catch { $('note-status').textContent = 'Saved on this device · waiting to sync'; } }, 4000);
+  state.note = $('note-text').value.normalize('NFC'); await saveLocalNote(state.date, state.note); $('note-status').textContent = 'Saved on this device · waiting to sync'; clearTimeout(noteTimer); noteTimer = setTimeout(() => flushOutbox(), 4000);
+}
+/**
+ * Push every queued note, not only the day on screen.
+ *
+ * flushNote() only ever ran for state.date, and nothing else drained the
+ * outbox — so a note typed and then navigated away from (or written offline and
+ * reopened on another day) stayed on the device for ever while the status line
+ * still read "waiting to sync".
+ */
+async function flushOutbox() {
+  if (!state.token || !state.context || !navigator.onLine) return;
+  for (const item of await listItems('outbox')) {
+    const date = item.date || item.key;
+    try { if (await flushNote(date, state.token, state.context) && date === state.date) $('note-status').textContent = 'Synced privately'; }
+    catch { /* stays queued for the next attempt */ }
+  }
 }
 async function copyMarkdown() { try { await navigator.clipboard.writeText(markdown()); toast('Markdown copied'); } catch { toast('Copy is unavailable in this browser'); } }
 function downloadText(content, name, type) { const link = document.createElement('a'); const url = URL.createObjectURL(new Blob([content], { type })); link.href = url; link.download = name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 0); }
@@ -120,16 +138,16 @@ async function saveSettings() {
   const entered = $('token-input').value.trim(); if (entered) { state.token = entered; write('sync.token.v1', entered); } const label = $('context-input').value.trim() || 'daybook'; if (!state.context) state.context = makeContext(label); write('daybook.context', state.context); write('daybook.contextLabel', label); state.textSize = $('text-size').value; state.markdownDetail = $('markdown-detail').value; write('daybook.textSize', state.textSize); write('daybook.markdownDetail', state.markdownDetail); await loadDay();
 }
 function bind() {
-  $('previous-day').onclick = () => shiftDay(-1); $('next-day').onclick = () => shiftDay(1); $('today-button').onclick = $('rail-today').onclick = () => changeDate(today()); $('date-button').onclick = () => $('date-dialog').showModal(); $('choose-date').onclick = () => changeDate($('date-input').value); $('refresh-button').onclick = () => loadDay(); $('open-settings').onclick = openSettings; $('settings-refresh').onclick = async () => { await renderStatuses(); toast('Source status refreshed'); }; $('save-settings').onclick = saveSettings;
+  $('previous-day').onclick = () => shiftDay(-1); $('next-day').onclick = () => shiftDay(1); $('today-button').onclick = $('rail-today').onclick = () => changeDate(today()); $('date-button').onclick = () => $('date-dialog').showModal(); $('choose-date').onclick = () => changeDate($('date-input').value); $('refresh-button').onclick = () => loadDay(); $('open-settings').onclick = openSettings; $('open-settings-compact').onclick = openSettings; $('settings-refresh').onclick = async () => { await renderStatuses(); toast('Source status refreshed'); }; $('save-settings').onclick = saveSettings;
   document.querySelectorAll('[data-view]').forEach((button) => button.onclick = () => setView(button.dataset.view)); $('copy-markdown').onclick = copyMarkdown; $('download-markdown').onclick = downloadMarkdown;
   $('note-text').addEventListener('compositionstart', () => { composing = true; }); $('note-text').addEventListener('compositionend', () => { composing = false; persistNote(); }); $('note-text').addEventListener('input', () => { if (!composing) persistNote(); });
   $('remove-token').onclick = () => { state.token = ''; remove('sync.token.v1'); $('token-status').textContent = 'No token saved'; $('token-input').value = ''; toast('Token removed from this device'); };
   $('clear-cache').onclick = async () => { await clearStore('days'); $('cache-size').textContent = 'Activity cache: cleared'; toast('Activity cache cleared'); };
   $('download-backup').onclick = async () => downloadText(JSON.stringify(await backupData(state), null, 2), `daybook-backup-${today()}.json`, 'application/json');
   $('restore-backup').onchange = async (event) => { try { const settings = await restoreData(JSON.parse(await event.target.files[0].text())); if (settings.textSize) state.textSize = settings.textSize; if (settings.markdownDetail) state.markdownDetail = settings.markdownDetail; toast('Backup restored'); await loadDay({ remote: false }); } catch { toast('This is not a valid Daybook backup'); } };
-  window.addEventListener('online', async () => { setBanner(); try { if (await flushNote(state.date, state.token, state.context)) $('note-status').textContent = 'Synced privately'; } catch { /* queued */ } await loadDay(); }); window.addEventListener('offline', () => { setBanner(); render(); });
+  window.addEventListener('online', async () => { setBanner(); await flushOutbox(); await loadDay(); }); window.addEventListener('offline', () => { setBanner(); render(); });
 }
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return; try { const registration = await navigator.serviceWorker.register('./sw.js'); if (registration.waiting) registration.waiting.postMessage({ type: 'SKIP_WAITING' }); registration.addEventListener('updatefound', () => registration.installing?.addEventListener('statechange', () => { if (registration.waiting) toast('Daybook update ready'); })); } catch { /* app remains usable online */ }
 }
-state.day = emptyDay(state.date); bind(); render(); loadDay(); registerServiceWorker();
+state.day = emptyDay(state.date); bind(); render(); loadDay().then(flushOutbox); registerServiceWorker();

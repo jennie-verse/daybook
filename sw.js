@@ -1,4 +1,4 @@
-const VERSION = '2026.08.17-3';
+const VERSION = '2026.08.19-1';
 const CACHE = `daybook-${VERSION}`;
 const SHELL = [
   './', './index.html', './assets/app.css',

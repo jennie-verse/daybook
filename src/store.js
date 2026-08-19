@@ -1,6 +1,11 @@
 const DB_NAME = 'daybook-db'; const DB_VERSION = 1; const STORES = ['sourceFiles', 'days', 'notes', 'noteConflicts', 'outbox', 'settings'];
-function openDb() { return new Promise((resolve, reject) => { const request = indexedDB.open(DB_NAME, DB_VERSION); request.onupgradeneeded = () => STORES.forEach((name) => { if (!request.result.objectStoreNames.contains(name)) request.result.createObjectStore(name, { keyPath: 'key' }); }); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }); }
-async function transact(storeName, mode, operation) { const db = await openDb(); try { return await new Promise((resolve, reject) => { const request = operation(db.transaction(storeName, mode).objectStore(storeName)); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }); } finally { db.close(); } }
+function openDb() { return new Promise((resolve, reject) => { const request = indexedDB.open(DB_NAME, DB_VERSION); request.onupgradeneeded = () => STORES.forEach((name) => { if (!request.result.objectStoreNames.contains(name)) request.result.createObjectStore(name, { keyPath: 'key' }); }); request.onsuccess = () => { const db = request.result; db.onversionchange = () => { db.close(); dbPromise = null; }; db.onclose = () => { dbPromise = null; }; resolve(db); }; request.onerror = () => reject(request.error); }); }
+// One connection, reused. Opening and closing the database per operation cost
+// two full open() round trips per keystroke in the Daily note, because every
+// keystroke writes both the note and its outbox entry.
+let dbPromise = null;
+function connection() { return dbPromise ||= openDb().catch((error) => { dbPromise = null; throw error; }); }
+async function transact(storeName, mode, operation) { const db = await connection(); return new Promise((resolve, reject) => { const request = operation(db.transaction(storeName, mode).objectStore(storeName)); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }); }
 export const getItem = (store, key) => transact(store, 'readonly', (objectStore) => objectStore.get(key));
 export const putItem = (store, item) => transact(store, 'readwrite', (objectStore) => objectStore.put(structuredClone(item)));
 export const deleteItem = (store, key) => transact(store, 'readwrite', (objectStore) => objectStore.delete(key));
