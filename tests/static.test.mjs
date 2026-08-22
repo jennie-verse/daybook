@@ -83,5 +83,16 @@ test('the bundled font ships its licence', () => {
 test('the cache version moved with the shipped files', () => {
   // cache-first: leaving the version alone leaves installed devices on the old
   // files for ever.
-  assert.match(read('sw.js'), /const VERSION = '2026\.08\.22-portable1';/);
+  assert.match(read('sw.js'), /const VERSION = '2026\.08\.22-portable2';/);
+});
+
+test('account-portable settings report custom-domain sync configuration failures', () => {
+  const html = read('index.html');
+  const sync = read('src/sync.js');
+  const app = read('src/app.js');
+  assert.doesNotMatch(html, /jennie-verse/);
+  assert.match(html, /owned by the GitHub Pages account/);
+  assert.match(sync, /configurationError: error\.message/);
+  assert.match(app, /state\.day\?\.configurationError/);
+  assert.match(app, /sync unavailable on this domain/);
 });

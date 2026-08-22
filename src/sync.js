@@ -8,17 +8,29 @@ const modules = () => modulesPromise ||= Promise.all([import('../../shared/v1/sy
 export async function refreshDay(date, token) {
   const cached = await readCachedDay(date);
   if (!token) return { ...(cached || { date, apps: Object.fromEntries(SOURCE_APPS.map(({ id }) => [id, []])), records: [] }), failures: SOURCE_APPS.map(({ id }) => id), cached: Boolean(cached), needsToken: true };
+  let repoConfig;
+  try { repoConfig = config(token); }
+  catch (error) {
+    if (error?.type !== 'configuration') throw error;
+    return { ...(cached || { date, apps: Object.fromEntries(SOURCE_APPS.map(({ id }) => [id, []])), records: [] }), failures: SOURCE_APPS.map(({ id }) => id), cached: Boolean(cached), configurationError: error.message };
+  }
   const { journal } = await modules();
-  const results = await Promise.all(SOURCE_APPS.map(async ({ id: app }) => { try { return await journal.readDate({ config: config(token), app, date }); } catch (error) { return { app, date, records: [], diagnostics: [], error }; } }));
+  const results = await Promise.all(SOURCE_APPS.map(async ({ id: app }) => { try { return await journal.readDate({ config: repoConfig, app, date }); } catch (error) { return { app, date, records: [], diagnostics: [], error }; } }));
   const merged = mergeSourceResults(results, cached); const day = { date, ...merged, cached: merged.failures.length > 0 && Boolean(cached), refreshedAt: new Date().toISOString() }; await cacheDay(date, day); return day;
 }
 export async function readSourceStatuses(token) {
   if (!token) return Object.fromEntries(SOURCE_APPS.map(({ id }) => [id, { state: 'not-reported' }]));
+  let repoConfig;
+  try { repoConfig = config(token); }
+  catch (error) {
+    if (error?.type !== 'configuration') throw error;
+    return Object.fromEntries(SOURCE_APPS.map(({ id }) => [id, { state: 'error', configurationError: error.message }]));
+  }
   const { v1 } = await modules();
   return Object.fromEntries(await Promise.all(SOURCE_APPS.map(async ({ id: app }) => {
     try {
-      const entries = await v1.listDir(config(token), `journal/status/${app}`); if (!entries.length) return [app, { state: 'not-reported' }]; const reports = [];
-      for (const entry of entries.filter((item) => item.type === 'file' && item.name.endsWith('.json'))) { try { const file = await v1.readFile(config(token), entry.path); if (file.exists) reports.push(JSON.parse(file.content)); } catch { /* retain other reports */ } }
+      const entries = await v1.listDir(repoConfig, `journal/status/${app}`); if (!entries.length) return [app, { state: 'not-reported' }]; const reports = [];
+      for (const entry of entries.filter((item) => item.type === 'file' && item.name.endsWith('.json'))) { try { const file = await v1.readFile(repoConfig, entry.path); if (file.exists) reports.push(JSON.parse(file.content)); } catch { /* retain other reports */ } }
       reports.sort((a, b) => Date.parse(b.reportedAt || 0) - Date.parse(a.reportedAt || 0)); const latest = reports[0]; if (!latest) return [app, { state: 'error' }];
       return [app, { ...latest, state: latest.journalEnabled === false ? 'disabled' : latest.lastErrorCode ? 'error' : Number(latest.pendingCount) > 0 ? 'pending' : 'ready' }];
     } catch { return [app, { state: 'error' }]; }

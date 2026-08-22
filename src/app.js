@@ -91,6 +91,7 @@ function setBanner() {
   const banner = $('connection-state'); banner.className = 'state-banner'; let text = '';
   if (!state.token) { text = state.day?.cached ? 'Not connected · showing cached data' : 'Connect your private repository in Settings to load journal activity.'; banner.classList.add('warning'); }
   else if (!navigator.onLine) { text = 'Offline · cached data. Daily note changes will sync when you reconnect.'; banner.classList.add('offline'); }
+  else if (state.day?.configurationError) { text = state.day.configurationError; banner.classList.add('warning'); }
   else if (state.day?.failures?.length) { text = `Some sources could not be refreshed: ${state.day.failures.map((id) => SOURCE_BY_ID.get(id).label).join(', ')}.`; banner.classList.add('partial'); }
   else if (state.day?.diagnostics?.length) { text = `${state.day.diagnostics.length} source file${state.day.diagnostics.length === 1 ? '' : 's'} could not be read. Other records are available.`; banner.classList.add('partial'); }
   banner.textContent = text; banner.hidden = !text;
@@ -121,7 +122,7 @@ async function flushOutbox() {
   for (const item of await listItems('outbox')) {
     const date = item.date || item.key;
     try { if (await flushNote(date, state.token, state.context) && date === state.date) $('note-status').textContent = 'Synced privately'; }
-    catch { /* stays queued for the next attempt */ }
+    catch (error) { if (error?.type === 'configuration' && date === state.date) $('note-status').textContent = 'Saved on this device · sync unavailable on this domain'; /* stays queued for the next attempt */ }
   }
 }
 async function copyMarkdown() { try { await navigator.clipboard.writeText(markdown()); toast('Markdown copied'); } catch { toast('Copy is unavailable in this browser'); } }
@@ -129,7 +130,7 @@ function downloadText(content, name, type) { const link = document.createElement
 function downloadMarkdown() { downloadText(markdown(), `journal-${state.date}.md`, 'text/markdown;charset=utf-8'); toast('Markdown downloaded'); }
 async function renderStatuses() {
   state.statuses = await readSourceStatuses(state.token); const host = $('source-status-list'); host.replaceChildren();
-  SOURCE_APPS.forEach((source) => { const item = node('div', 'source-status'); item.append(node('span', 'status-dot ' + (state.statuses[source.id]?.state || 'not-reported')), node('strong', '', source.label)); const details = node('span', '', (state.statuses[source.id]?.state || 'not-reported').replace('-', ' ')); const reported = state.statuses[source.id]?.reportedAt; if (reported) details.title = `Last reported ${new Date(reported).toLocaleString()}`; const link = node('a', 'text-button', 'Add history in app'); link.href = source.href; item.append(details, link); host.append(item); });
+  SOURCE_APPS.forEach((source) => { const item = node('div', 'source-status'); item.append(node('span', 'status-dot ' + (state.statuses[source.id]?.state || 'not-reported')), node('strong', '', source.label)); const configurationError = state.statuses[source.id]?.configurationError; const details = node('span', '', configurationError ? 'configuration required' : (state.statuses[source.id]?.state || 'not-reported').replace('-', ' ')); const reported = state.statuses[source.id]?.reportedAt; if (configurationError) details.title = configurationError; else if (reported) details.title = `Last reported ${new Date(reported).toLocaleString()}`; const link = node('a', 'text-button', 'Add history in app'); link.href = source.href; item.append(details, link); host.append(item); });
 }
 async function openSettings() {
   $('token-input').value = ''; $('token-status').textContent = state.token ? `Saved token ending in ••••${state.token.slice(-4)}` : 'No token saved'; $('context-input').value = read('daybook.contextLabel'); $('text-size').value = state.textSize; $('markdown-detail').value = state.markdownDetail; $('cache-size').textContent = `Activity cache: ${Math.max(1, Math.round((await getCacheBytes()) / 1024))} KB`; await renderStatuses(); $('settings-dialog').showModal();
