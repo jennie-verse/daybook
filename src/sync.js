@@ -1,8 +1,8 @@
 import { SOURCE_APPS } from './sources.js';
 import { mergeSourceResults } from './merge.js';
 import { cacheDay, deleteItem, getItem, preserveConflict, putItem, readCachedDay } from './store.js';
-const REPO = Object.freeze({ owner: 'jennie-verse', repo: 'webapp-data', branch: 'main' });
-const config = (token) => ({ ...REPO, token });
+import { webappDataConfig } from './deployment.js';
+const config = (token) => webappDataConfig(token);
 let modulesPromise;
 const modules = () => modulesPromise ||= Promise.all([import('../../shared/v1/sync.js'), import('../../shared/v2/journal.js')]).then(([v1, journal]) => ({ v1, journal }));
 export async function refreshDay(date, token) {
