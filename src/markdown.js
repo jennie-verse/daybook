@@ -1,6 +1,6 @@
 import { FILE_APPS, SOURCE_APPS } from './sources.js';
 import { appIdsWithRecords } from './merge.js';
-import { petalGroups, safeText } from './day-model.js';
+import { fileAppRecords, folioGroups, folioNoteRecords, petalGroups, safeText } from './day-model.js';
 const mdText = (value) => safeText(value).replace(/([\\`*_[\]{}<>#+.!|~-])/g, '\\$1');
 const quote = (value) => safeText(value).split('\n').map((line) => `> ${line}`).join('\n');
 const time = (iso) => safeText(iso).slice(11, 16);
@@ -28,9 +28,23 @@ function petal(records, full) {
   petalGroups(records).forEach((book) => { out.push('', `### ${mdText(book.title)}${book.author ? ` — ${mdText(book.author)}` : ''}`, ''); book.records.forEach((record) => { const data = record.data || {}; if (record.kind === 'reading-session') out.push(`- Read ${Math.round(Number(data.startProgression || 0) * 100)}% → ${Math.round(Number(data.endProgression || 0) * 100)}% · ${duration(data.activeSeconds)}m active${data.chapterLabel ? ` · ${mdText(data.chapterLabel)}` : ''}`); else { out.push(`- ${mdText(record.kind.replaceAll('-', ' '))} · ${time(record.at)}`); if (full && data.quote) out.push('', quote(data.quote), ''); if (full && data.note) out.push(`  Note: ${mdText(data.note)}`); if (full && data.definition) out.push(`  Definition: ${mdText(data.definition)}`); } }); });
   return out.join('\n').trimEnd();
 }
+function folio(records, full) {
+  const out = ['## Folio notes'];
+  folioGroups(records).forEach((documentGroup) => {
+    out.push('', `### ${mdText(documentGroup.title)}`, '');
+    documentGroup.records.forEach((record) => {
+      const data = record.data || {};
+      const label = record.kind.replaceAll('-', ' ');
+      out.push(`- ${mdText(label)} · ${time(record.at)}${data.locationLabel ? ` · ${mdText(data.locationLabel)}` : ''}`);
+      if (full && data.quote) out.push('', quote(data.quote), '');
+      if (full && data.note) out.push(`  Note: ${mdText(data.note)}`);
+    });
+  });
+  return out.join('\n').trimEnd();
+}
 function fileSections(day) {
   const out = ['## Files worked with'];
-  SOURCE_APPS.filter(({ id }) => FILE_APPS.includes(id) && day.apps?.[id]?.length).forEach((source) => { out.push('', `### ${source.label}`, ''); day.apps[source.id].forEach((record) => out.push(`- ${codeSpan(record.title)} · ${(record.data?.actions || []).map(actionLabel).join(', ')}`)); });
+  SOURCE_APPS.filter(({ id }) => FILE_APPS.includes(id) && fileAppRecords(id, day.apps?.[id] || []).length).forEach((source) => { out.push('', `### ${source.label}`, ''); fileAppRecords(source.id, day.apps[source.id]).forEach((record) => out.push(`- ${codeSpan(record.title)} · ${(record.data?.actions || []).map(actionLabel).join(', ')}`)); });
   return out.join('\n');
 }
 export function serializeMarkdown({ day, date, note = '', detail = 'full', timezone = Intl.DateTimeFormat().resolvedOptions().timeZone }) {
@@ -40,7 +54,8 @@ export function serializeMarkdown({ day, date, note = '', detail = 'full', timez
   if (day.apps?.focus?.length) sections.push(focus(day.apps.focus));
   if (day.apps?.loom?.length) sections.push(loom(day.apps.loom, detail === 'full'));
   if (day.apps?.petal?.length) sections.push(petal(day.apps.petal, detail === 'full'));
-  if (FILE_APPS.some((app) => day.apps?.[app]?.length)) sections.push(fileSections(day));
+  if (folioNoteRecords(day.apps?.folio || []).length) sections.push(folio(day.apps.folio, detail === 'full'));
+  if (FILE_APPS.some((app) => fileAppRecords(app, day.apps?.[app] || []).length)) sections.push(fileSections(day));
   sections.push(`## Daily note\n\n${safeText(note)}`.trimEnd());
   return `${front.join('\n')}\n\n# ${title}\n\n${sections.join('\n\n')}\n`;
 }

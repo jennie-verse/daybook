@@ -2,7 +2,7 @@
 
 ## 기록 보기
 
-- **By app**: Tide, Focus, Loom, Petal을 한 문서처럼 이어서 표시하고 Folio, Quill, Slate, Grove는 Files worked with 아래에 묶습니다.
+- **By app**: Tide, Focus, Loom, Petal을 한 문서처럼 이어서 표시합니다. Folio의 하이라이트·메모·인용 내보내기는 **Folio notes**에 문서별로 표시하고, 파일 열기·읽기 활동은 Quill, Slate, Grove와 함께 **Files worked with**에 표시합니다.
 - **Timeline**: 모든 record를 시간순으로 표시합니다. Details 또는 Show source text로 긴 원문을 펼칠 수 있습니다.
 - **Markdown**: 안전한 Preview와 Source를 전환하고, 같은 serializer 결과를 복사하거나 `journal-YYYY-MM-DD.md`로 다운로드합니다.
 
@@ -15,5 +15,6 @@
 ## 개인정보
 
 - Source 앱의 Journal 포함 설정은 앱마다 별도이며 기본적으로 꺼져 있습니다.
-- Folio, Quill, Slate, Grove는 제목과 의미 있는 활동만 전송하고 본문·보드·맵 내용은 복제하지 않습니다.
+- Folio는 사용자가 Journal을 켠 경우 문서 제목·위치·활동을 전송합니다. Folio 설정의 `Include selected text and note bodies`가 켜져 있을 때만 선택 문구와 메모 본문을 Daybook의 Full Markdown에 포함합니다. 원본 파일과 PDF 좌표는 전송하지 않습니다.
+- Quill, Slate, Grove는 제목과 의미 있는 활동만 전송하고 본문·보드·맵 내용은 복제하지 않습니다.
 - Settings의 backup은 Daybook 설정과 Daily note만 포함합니다.

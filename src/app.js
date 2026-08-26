@@ -1,5 +1,5 @@
 import { SOURCE_APPS, SOURCE_BY_ID } from './sources.js';
-import { petalGroups, recordBody, recordMeta, sourceSummary, timeLabel, visibleSections } from './day-model.js';
+import { fileAppRecords, folioGroups, petalGroups, recordBody, recordMeta, sourceSummary, timeLabel, visibleSections } from './day-model.js';
 import { serializeMarkdown } from './markdown.js';
 import { backupData, clearStore, getCacheBytes, listItems, readLocalNote, restoreData, saveLocalNote } from './store.js';
 import { flushNote, readSourceStatuses, reconcileNote, refreshDay } from './sync.js';
@@ -54,10 +54,11 @@ function appSection(source, records) {
   return section;
 }
 function renderByApp() {
-  const fragment = document.createDocumentFragment(); const { regular, files } = visibleSections(state.day);
+  const fragment = document.createDocumentFragment(); const { regular, files, folioNotes } = visibleSections(state.day);
   regular.forEach((source) => fragment.append(appSection(source, state.day.apps[source.id])));
-  if (files.length) { const section = node('section', 'source-section files-section'); const heading = node('div', 'section-heading source-heading'); const wrap = node('div'); wrap.append(node('span', 'section-icon', '▤'), node('h2', '', 'Files worked with')); heading.append(wrap); section.append(heading); files.forEach((source) => { const group = node('div', 'file-group'); const label = node('h3', '', source.label); label.append(node('span', 'summary', ` · ${sourceSummary(source.id, state.day.apps[source.id])}`)); group.append(label); state.day.apps[source.id].forEach((record) => group.append(entryNode(record))); section.append(group); }); fragment.append(section); }
-  if (!regular.length && !files.length) { const empty = node('div', 'empty-state'); empty.append(node('span', 'empty-icon', '☁'), node('h2', '', 'No records this day.'), node('p', '', 'Your Daily note is still available below. Included activity will appear after a source app syncs.')); fragment.append(empty); }
+  if (folioNotes.length) { const section = node('section', 'source-section folio-notes-section'); const heading = node('div', 'section-heading source-heading'); const wrap = node('div'); wrap.append(node('span', 'section-icon', '▧'), node('h2', '', 'Folio notes')); heading.append(wrap, node('span', 'summary', sourceSummary('folio', folioNotes))); section.append(heading); folioGroups(folioNotes).forEach((documentGroup) => { const group = node('div', 'book-group'); group.append(node('h3', '', documentGroup.title)); documentGroup.records.forEach((record) => group.append(entryNode(record))); section.append(group); }); fragment.append(section); }
+  if (files.length) { const section = node('section', 'source-section files-section'); const heading = node('div', 'section-heading source-heading'); const wrap = node('div'); wrap.append(node('span', 'section-icon', '▤'), node('h2', '', 'Files worked with')); heading.append(wrap); section.append(heading); files.forEach((source) => { const records = fileAppRecords(source.id, state.day.apps[source.id]); const group = node('div', 'file-group'); const label = node('h3', '', source.label); label.append(node('span', 'summary', ` · ${sourceSummary(source.id, records)}`)); group.append(label); records.forEach((record) => group.append(entryNode(record))); section.append(group); }); fragment.append(section); }
+  if (!regular.length && !files.length && !folioNotes.length) { const empty = node('div', 'empty-state'); empty.append(node('span', 'empty-icon', '☁'), node('h2', '', 'No records this day.'), node('p', '', 'Your Daily note is still available below. Included activity will appear after a source app syncs.')); fragment.append(empty); }
   return fragment;
 }
 function renderTimeline() {
