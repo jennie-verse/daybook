@@ -7,21 +7,27 @@ const time = (iso) => safeText(iso).slice(11, 16);
 const clock = (mins) => `${String(Math.floor(Number(mins || 0) / 60)).padStart(2, '0')}:${String(Number(mins || 0) % 60).padStart(2, '0')}`;
 const duration = (seconds) => Math.max(0, Math.round(Number(seconds || 0) / 60));
 const codeSpan = (value) => { const body = safeText(value); const ticks = Math.max(1, ...(body.match(/`+/g) || []).map((match) => match.length + 1)); const fence = '`'.repeat(ticks); return `${fence}${body}${fence}`; };
-const actionLabel = (value) => ({ created: 'Created', added: 'Added', opened: 'Opened', read: 'Read', edited: 'Edited', 'export-requested': 'Export requested' }[value] || value);
+const actionLabel = (value) => ({ created: 'Created', added: 'Added', opened: 'Opened', read: 'Read', edited: 'Edited', copied: 'Copied', pinned: 'Pinned', unpinned: 'Unpinned', 'moved-to-today': 'Moved to today', moved: 'Moved', completed: 'Completed', reopened: 'Reopened', deleted: 'Deleted', exported: 'Exported', 'export-requested': 'Export requested' }[value] || value);
+const provenance = (record) => record.data?.importedHistory ? ` · Imported history (${record.data.historyAccuracy || 'inferred'})` : '';
 function tide(records, full) {
   const out = ['## Tide'];
   for (const kind of ['clip', 'dump']) {
     const items = records.filter((record) => record.kind === kind); if (!items.length) continue;
     out.push('', `### ${kind === 'clip' ? 'Clips' : 'Dump'}`, '');
-    items.forEach((record) => { out.push(`- ${time(record.at)}${record.data?.label ? ` · **${mdText(record.data.label)}**` : ''}${record.data?.type ? ` · ${mdText(record.data.type)}` : ''}`); if (full && record.data?.text) out.push('', quote(record.data.text), ''); });
+    items.forEach((record) => { out.push(`- ${time(record.at)}${record.data?.label ? ` · **${mdText(record.data.label)}**` : ''}${record.data?.type ? ` · ${mdText(record.data.type)}` : ''}${provenance(record)}`); if (full && record.data?.text) out.push('', quote(record.data.text), ''); });
   }
+  const activity = records.filter((record) => record.kind === 'item-activity');
+  if (activity.length) { out.push('', '### Activity', ''); activity.forEach((record) => out.push(`- ${time(record.data?.lastAt || record.at)} · ${mdText(record.data?.itemType || 'Item')} · ${(record.data?.actions || []).map(actionLabel).join(', ')}${full && record.data?.contentIncluded !== false && record.title ? ` · ${mdText(record.title)}` : ''}${provenance(record)}`)); }
   return out.join('\n').trimEnd();
 }
-function focus(records) {
-  return ['## Focus', '', ...records.map((record) => { const data = record.data || {}; const details = [data.subject && `  - Subject: ${mdText(data.subject)}`, data.task && `  - Task: ${mdText(data.task)}`].filter(Boolean); return [`- ${time(data.startedAt)}–${time(data.endedAt)} · **${mdText(record.title)}** · ${duration(data.elapsedSeconds)}m${data.plannedSeconds ? ` / planned ${duration(data.plannedSeconds)}m` : ''} · ${data.completed ? 'Completed' : 'Stopped'}`, ...details].join('\n'); })].join('\n');
+function focus(records, full) {
+  return ['## Focus', '', ...records.map((record) => { const data = record.data || {}; const details = full ? [data.subject && `  - Subject: ${mdText(data.subject)}`, data.task && `  - Task: ${mdText(data.task)}`].filter(Boolean) : []; return [`- ${time(data.startedAt)}–${time(data.endedAt)} · **${mdText(record.title)}** · ${duration(data.elapsedSeconds)}m${data.plannedSeconds ? ` / planned ${duration(data.plannedSeconds)}m` : ''} · ${data.completed ? 'Completed' : 'Stopped'}${provenance(record)}`, ...details].join('\n'); })].join('\n');
 }
 function loom(records, full) {
-  return ['## Loom', '', ...records.map((record) => { const data = record.data || {}; const lines = [`- [${data.done ? 'x' : ' '}] ${clock(data.start)}–${clock(Number(data.start || 0) + Number(data.duration || 0))} · **${mdText(record.title)}**`]; if (data.subtitle) lines.push(`  - Subtitle: ${mdText(data.subtitle)}`); if (full && data.note) lines.push(`  - Note: ${mdText(data.note)}`); if (full && data.detail) lines.push(`  - Detail: ${mdText(data.detail)}`); return lines.join('\n'); })].join('\n');
+  const schedule = records.filter((record) => record.kind === 'block'); const changes = records.filter((record) => record.kind === 'block-activity'); const out = ['## Loom'];
+  if (schedule.length) { out.push('', '### Schedule', ''); schedule.forEach((record) => { const data = record.data || {}; const lines = [`- [${data.done ? 'x' : ' '}] ${clock(data.start)}–${clock(Number(data.start || 0) + Number(data.duration || 0))} · **${mdText(record.title)}**${provenance(record)}`]; if (full && data.subtitle) lines.push(`  - Subtitle: ${mdText(data.subtitle)}`); if (full && data.note) lines.push(`  - Note: ${mdText(data.note)}`); if (full && data.detail) lines.push(`  - Detail: ${mdText(data.detail)}`); out.push(lines.join('\n')); }); }
+  if (changes.length) { out.push('', '### Changes made this day', ''); changes.forEach((record) => { const data = record.data || {}; out.push(`- ${time(data.lastAt || record.at)} · ${(data.actions || []).map(actionLabel).join(', ')}${data.sourceDate ? ` · scheduled ${data.sourceDate}` : ''}${full && data.contentIncluded !== false && record.title ? ` · ${mdText(record.title)}` : ''}${provenance(record)}`); }); }
+  return out.join('\n');
 }
 function petal(records, full) {
   const out = ['## Petal'];
@@ -51,7 +57,7 @@ export function serializeMarkdown({ day, date, note = '', detail = 'full', timez
   const apps = appIdsWithRecords(day); const status = day.cached ? 'cached' : day.failures?.length ? 'partial' : 'complete'; const parsed = new Date(`${date}T12:00:00`); const title = Number.isNaN(parsed.getTime()) ? date : parsed.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
   const front = ['---', `date: ${date}`, ...(timezone ? [`timezone: ${timezone}`] : []), 'apps:', ...apps.map((app) => `  - ${app}`), `status: ${status}`, '---']; const sections = [];
   if (day.apps?.tide?.length) sections.push(tide(day.apps.tide, detail === 'full'));
-  if (day.apps?.focus?.length) sections.push(focus(day.apps.focus));
+  if (day.apps?.focus?.length) sections.push(focus(day.apps.focus, detail === 'full'));
   if (day.apps?.loom?.length) sections.push(loom(day.apps.loom, detail === 'full'));
   if (day.apps?.petal?.length) sections.push(petal(day.apps.petal, detail === 'full'));
   if (folioNoteRecords(day.apps?.folio || []).length) sections.push(folio(day.apps.folio, detail === 'full'));

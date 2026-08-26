@@ -3,11 +3,11 @@ export const safeText = (value) => String(value ?? '').normalize('NFC');
 export const timeLabel = (iso) => { const parsed = new Date(iso); return Number.isNaN(parsed.getTime()) ? '--:--' : parsed.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); };
 const minutes = (seconds) => Math.max(0, Math.round(Number(seconds || 0) / 60));
 const clockFromMinutes = (value) => `${String(Math.floor(Number(value || 0) / 60)).padStart(2, '0')}:${String(Number(value || 0) % 60).padStart(2, '0')}`;
-const actionLabel = (action) => ({ created: 'Created', added: 'Added', opened: 'Opened', read: 'Read', edited: 'Edited', 'export-requested': 'Export requested' }[action] || action);
+const actionLabel = (action) => ({ created: 'Created', added: 'Added', opened: 'Opened', read: 'Read', edited: 'Edited', copied: 'Copied', pinned: 'Pinned', unpinned: 'Unpinned', 'moved-to-today': 'Moved to today', moved: 'Moved', completed: 'Completed', reopened: 'Reopened', deleted: 'Deleted', exported: 'Exported', 'export-requested': 'Export requested' }[action] || action);
 export function sourceSummary(app, records) {
-  if (app === 'tide') return `${records.filter((r) => r.kind === 'clip').length} clips · ${records.filter((r) => r.kind === 'dump').length} dumps`;
+  if (app === 'tide') return `${records.filter((r) => r.kind === 'clip').length} clips · ${records.filter((r) => r.kind === 'dump').length} dumps · ${records.filter((r) => r.kind === 'item-activity').length} activities`;
   if (app === 'focus') { const focus = records.filter((r) => r.data?.mode === 'focus'); return `${focus.length} focus · ${records.length - focus.length} breaks · ${minutes(focus.reduce((sum, r) => sum + Number(r.data?.elapsedSeconds || 0), 0))}m`; }
-  if (app === 'loom') return `${records.length} blocks · ${records.filter((r) => r.data?.done).length} done`;
+  if (app === 'loom') { const blocks = records.filter((r) => r.kind === 'block'); return `${blocks.length} blocks · ${blocks.filter((r) => r.data?.done).length} done · ${records.length - blocks.length} changes`; }
   if (app === 'petal') return `${new Set(records.map((r) => r.data?.bookId).filter(Boolean)).size} books · ${records.length} activities`;
   if (app === 'folio') {
     const notes = records.filter((record) => record.kind !== 'file-activity');
@@ -17,9 +17,9 @@ export function sourceSummary(app, records) {
 }
 export function recordMeta(record) {
   const data = record.data || {};
-  if (record.app === 'tide') return [data.label, data.type].filter(Boolean).join(' · ');
+  if (record.app === 'tide') return record.kind === 'item-activity' ? [data.itemType, ...(data.actions || []).map(actionLabel), data.sourceDate && `from ${data.sourceDate}`].filter(Boolean).join(' · ') : [data.label, data.type].filter(Boolean).join(' · ');
   if (record.app === 'focus') return `${minutes(data.elapsedSeconds)}m${data.plannedSeconds ? ` / planned ${minutes(data.plannedSeconds)}m` : ''} · ${data.completed ? 'Completed' : 'Stopped'}`;
-  if (record.app === 'loom') return `${clockFromMinutes(data.start)}–${clockFromMinutes(Number(data.start || 0) + Number(data.duration || 0))} · ${data.done ? 'Done' : 'Not done'}`;
+  if (record.app === 'loom') return record.kind === 'block-activity' ? [...(data.actions || []).map(actionLabel), data.sourceDate && `scheduled ${data.sourceDate}`].filter(Boolean).join(' · ') : `${clockFromMinutes(data.start)}–${clockFromMinutes(Number(data.start || 0) + Number(data.duration || 0))} · ${data.done ? 'Done' : 'Not done'}`;
   if (record.app === 'petal') { if (record.kind === 'reading-session') return `${Math.round(Number(data.startProgression || 0) * 100)}% → ${Math.round(Number(data.endProgression || 0) * 100)}% · ${minutes(data.activeSeconds)}m active`; return record.kind.replaceAll('-', ' '); }
   if (record.app === 'folio' && record.kind !== 'file-activity') return [record.kind.replaceAll('-', ' '), data.locationLabel].filter(Boolean).join(' · ');
   return (data.actions || []).map(actionLabel).join(', ');

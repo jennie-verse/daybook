@@ -23,7 +23,7 @@ const state = {
   date: rememberedDate(), view: read('daybook.view', 'by-app'), token: read('sync.token.v1'), context: read('daybook.context'),
   textSize: read('daybook.textSize', '12'), markdownDetail: read('daybook.markdownDetail', 'full'), day: null, note: '', statuses: {}, availability: new Map(), refreshing: false,
 };
-let noteTimer = null; let composing = false; let toastTimer = null;
+let noteTimer = null; let composing = false; let toastTimer = null; let lastRemoteRefreshAt = 0; let resumeTimer = null;
 const node = (tag, className, text) => { const element = document.createElement(tag); if (className) element.className = className; if (text !== undefined) element.textContent = text; return element; };
 function toast(message) { $('toast').textContent = message; $('toast').classList.add('visible'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').classList.remove('visible'), 2600); }
 function updateDateHeader() {
@@ -100,7 +100,7 @@ function setBanner() {
 async function loadDay({ remote = true } = {}) {
   if (state.refreshing) return; state.refreshing = true; $('refresh-button').disabled = true; $('freshness').textContent = 'Refreshing…';
   try {
-    state.day = await refreshDay(state.date, remote ? state.token : ''); const cachedDays = await listItems('days'); state.availability = new Map(cachedDays.map((day) => [day.date || day.key, new Set((day.records || []).map((record) => record.app)).size]).filter(([, count]) => count)); const note = remote && state.token ? await reconcileNote(state.date, state.token) : await readLocalNote(state.date); state.note = note?.markdown || ''; $('note-text').value = state.note; $('note-status').textContent = 'Saved on this device'; setBanner(); render();
+    state.day = await refreshDay(state.date, remote ? state.token : ''); if (remote && state.token) lastRemoteRefreshAt = Date.now(); const cachedDays = await listItems('days'); state.availability = new Map(cachedDays.map((day) => [day.date || day.key, new Set((day.records || []).map((record) => record.app)).size]).filter(([, count]) => count)); const note = remote && state.token ? await reconcileNote(state.date, state.token) : await readLocalNote(state.date); state.note = note?.markdown || ''; $('note-text').value = state.note; $('note-status').textContent = 'Saved on this device'; setBanner(); render();
   } catch { state.day ||= emptyDay(state.date); setBanner(); render(); toast('Cached journal remains available.'); }
   finally { state.refreshing = false; $('refresh-button').disabled = false; }
 }
@@ -131,7 +131,7 @@ function downloadText(content, name, type) { const link = document.createElement
 function downloadMarkdown() { downloadText(markdown(), `journal-${state.date}.md`, 'text/markdown;charset=utf-8'); toast('Markdown downloaded'); }
 async function renderStatuses() {
   state.statuses = await readSourceStatuses(state.token); const host = $('source-status-list'); host.replaceChildren();
-  SOURCE_APPS.forEach((source) => { const item = node('div', 'source-status'); item.append(node('span', 'status-dot ' + (state.statuses[source.id]?.state || 'not-reported')), node('strong', '', source.label)); const configurationError = state.statuses[source.id]?.configurationError; const details = node('span', '', configurationError ? 'configuration required' : (state.statuses[source.id]?.state || 'not-reported').replace('-', ' ')); const reported = state.statuses[source.id]?.reportedAt; if (configurationError) details.title = configurationError; else if (reported) details.title = `Last reported ${new Date(reported).toLocaleString()}`; const link = node('a', 'text-button', 'Add history in app'); link.href = source.href; item.append(details, link); host.append(item); });
+  SOURCE_APPS.forEach((source) => { const status = state.statuses[source.id] || {}; const item = node('div', 'source-status'); item.append(node('span', 'status-dot ' + (status.state || 'not-reported')), node('strong', '', source.label)); const configurationError = status.configurationError; const parts = [configurationError ? 'configuration required' : (status.state || 'not-reported').replace('-', ' ')]; if (status.contextCount) parts.push(`${status.contextCount} context${status.contextCount === 1 ? '' : 's'}`); if (status.mixedContent) parts.push('mixed content settings'); if (status.pendingCount) parts.push(`${status.pendingCount} pending`); const details = node('span', '', parts.join(' · ')); if (configurationError) details.title = configurationError; else if (status.reportedAt) details.title = `Last reported ${new Date(status.reportedAt).toLocaleString()}${status.lastSuccessfulWriteAt ? ` · Last write ${new Date(status.lastSuccessfulWriteAt).toLocaleString()}` : ''}`; const link = node('a', 'text-button', ['quill', 'slate', 'grove'].includes(source.id) && status.state === 'not-reported' ? 'History starts with this version' : 'Open Journal settings'); link.href = source.href; item.append(details, link); host.append(item); });
 }
 async function openSettings() {
   $('token-input').value = ''; $('token-status').textContent = state.token ? `Saved token ending in ••••${state.token.slice(-4)}` : 'No token saved'; $('context-input').value = read('daybook.contextLabel'); $('text-size').value = state.textSize; $('markdown-detail').value = state.markdownDetail; $('cache-size').textContent = `Activity cache: ${Math.max(1, Math.round((await getCacheBytes()) / 1024))} KB`; await renderStatuses(); $('settings-dialog').showModal();
@@ -148,6 +148,8 @@ function bind() {
   $('download-backup').onclick = async () => downloadText(JSON.stringify(await backupData(state), null, 2), `daybook-backup-${today()}.json`, 'application/json');
   $('restore-backup').onchange = async (event) => { try { const settings = await restoreData(JSON.parse(await event.target.files[0].text())); if (settings.textSize) state.textSize = settings.textSize; if (settings.markdownDetail) state.markdownDetail = settings.markdownDetail; toast('Backup restored'); await loadDay({ remote: false }); } catch { toast('This is not a valid Daybook backup'); } };
   window.addEventListener('online', async () => { setBanner(); await flushOutbox(); await loadDay(); }); window.addEventListener('offline', () => { setBanner(); render(); });
+  const refreshOnResume = () => { if (document.visibilityState === 'hidden' || Date.now() - lastRemoteRefreshAt <= 60_000) return; clearTimeout(resumeTimer); resumeTimer = setTimeout(() => loadDay(), 250); };
+  window.addEventListener('pageshow', refreshOnResume); document.addEventListener('visibilitychange', refreshOnResume);
 }
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return; try { const registration = await navigator.serviceWorker.register('./sw.js'); if (registration.waiting) registration.waiting.postMessage({ type: 'SKIP_WAITING' }); registration.addEventListener('updatefound', () => registration.installing?.addEventListener('statechange', () => { if (registration.waiting) toast('Daybook update ready'); })); } catch { /* app remains usable online */ }

@@ -31,8 +31,10 @@ export async function readSourceStatuses(token) {
     try {
       const entries = await v1.listDir(repoConfig, `journal/status/${app}`); if (!entries.length) return [app, { state: 'not-reported' }]; const reports = [];
       for (const entry of entries.filter((item) => item.type === 'file' && item.name.endsWith('.json'))) { try { const file = await v1.readFile(repoConfig, entry.path); if (file.exists) reports.push(JSON.parse(file.content)); } catch { /* retain other reports */ } }
-      reports.sort((a, b) => Date.parse(b.reportedAt || 0) - Date.parse(a.reportedAt || 0)); const latest = reports[0]; if (!latest) return [app, { state: 'error' }];
-      return [app, { ...latest, state: latest.journalEnabled === false ? 'disabled' : latest.lastErrorCode ? 'error' : Number(latest.pendingCount) > 0 ? 'pending' : 'ready' }];
+      reports.sort((a, b) => Date.parse(b.reportedAt || 0) - Date.parse(a.reportedAt || 0)); const latest = reports[0]; if (!latest) return [app, { state: 'error', reports: [] }];
+      const stale = !Number.isFinite(Date.parse(latest.reportedAt)) || Date.now() - Date.parse(latest.reportedAt) > 7 * 24 * 60 * 60 * 1000;
+      const state = latest.journalEnabled === false ? 'disabled' : latest.lastErrorCode ? 'error' : Number(latest.pendingCount) > 0 ? 'pending' : stale ? 'stale' : 'ready';
+      return [app, { ...latest, state, contextCount: reports.length, mixedContent: new Set(reports.map((report) => report.contentIncluded).filter((value) => typeof value === 'boolean')).size > 1, reports }];
     } catch { return [app, { state: 'error' }]; }
   })));
 }

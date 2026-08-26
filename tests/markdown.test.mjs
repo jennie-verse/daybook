@@ -39,3 +39,14 @@ test('non-Folio file apps keep their native activity kinds', () => {
   assert.match(output, /### Slate[\s\S]*`Ideas` · Edited/);
   assert.match(output, /### Grove[\s\S]*`Map` · Opened/);
 });
+
+test('Tide and Loom activities are separate and Compact hides long source content', () => {
+  const focus = { app: 'focus', id: 's1', kind: 'session', at: '2026-08-17T09:00:00-05:00', updatedAt: '2026-08-17T09:25:00-05:00', title: 'Focus session', data: { startedAt: '2026-08-17T09:00:00-05:00', endedAt: '2026-08-17T09:25:00-05:00', subject: 'Private subject', task: 'Private task', elapsedSeconds: 1500, completed: true } };
+  const tide = { app: 'tide', id: 'c1:2026-08-17', kind: 'item-activity', at: '2026-08-17T10:00:00-05:00', updatedAt: '2026-08-17T10:05:00-05:00', title: 'Private clip title', data: { itemType: 'Clip', actions: ['copied', 'edited'], sourceDate: '2026-08-01', lastAt: '2026-08-17T10:05:00-05:00' } };
+  const loom = { app: 'loom', id: 'b1:2026-08-17', kind: 'block-activity', at: '2026-08-17T11:00:00-05:00', updatedAt: '2026-08-17T11:05:00-05:00', title: 'Private block title', data: { actions: ['completed'], sourceDate: '2026-08-20', note: 'Private note' } };
+  const day = { apps: { ...emptyApps, focus: [focus], tide: [tide], loom: [loom] }, records: [focus, tide, loom], failures: [] };
+  const compact = serializeMarkdown({ day, date: '2026-08-17', detail: 'compact' });
+  assert.match(compact, /### Activity[\s\S]*Copied, Edited/);
+  assert.match(compact, /### Changes made this day[\s\S]*Completed · scheduled 2026-08-20/);
+  assert.doesNotMatch(compact, /Private subject|Private task|Private clip title|Private block title|Private note/);
+});
