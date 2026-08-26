@@ -70,3 +70,10 @@ iPhone 가로에서 rail이 노출되던 차이는 최종 CSS에서 수정했습
 ## 4. 회귀 테스트 8개
 
 phone에서의 Settings 도달 가능성 · 16px 미만 포커스 대상 없음 · 44px 터치 영역 · outbox 전체 flush · DB 연결 재사용 · 저장된 날짜 검증 · 폰트 라이선스 동봉 · 캐시 버전 갱신.
+
+## 2026-08-26 Journal 8 완료 검증
+
+- **Pass — 자동:** 8-source 새 activity, Full/Compact field matrix, stale/context status, visible 복귀 refresh, source별 cache fallback, Markdown 안전성 및 기존 note 회귀 검사.
+- **Pass — 브라우저:** desktop·390×844에서 Settings 8-source, Compact 안내, 가로 overflow 0, console warning/error 0.
+- **Pending — private E2E:** 실제 token으로 8개 source write → Daybook read → offline flush → redaction 확인은 사용자 credential 없이 실행하지 않음.
+- **Pending — 실기기:** iPhone/iPad Home Screen별 token/context 저장소와 Service Worker update는 실제 Safari에서 최종 확인 필요.
