@@ -40,6 +40,22 @@ test('non-Folio file apps keep their native activity kinds', () => {
   assert.match(output, /### Grove[\s\S]*`Map` · Opened/);
 });
 
+test('Today tasks render checkboxes and subtasks in full mode, and hide subtask text in compact mode', () => {
+  const today = [
+    { app: 'today', id: 't1', kind: 'task', at: '2026-08-26T09:00:00-05:00', updatedAt: '2026-08-26T09:00:00-05:00', title: '원고 교정 2절', data: { done: false, subtaskCount: 2, subtaskDoneCount: 1, subtasks: [{ id: 's1', title: '1절 반영', done: true }, { id: 's2', title: '각주 정리', done: false }], contentIncluded: true } },
+    { app: 'today', id: 't1:2026-08-26', kind: 'task-activity', at: '2026-08-26T09:05:00-05:00', updatedAt: '2026-08-26T09:05:00-05:00', title: '원고 교정 2절', data: { actions: ['promoted'], lastAt: '2026-08-26T09:05:00-05:00', contentIncluded: true } },
+  ];
+  const day = { apps: { ...emptyApps, today }, records: today, failures: [] };
+  const full = serializeMarkdown({ day, date: '2026-08-26', detail: 'full', timezone: 'America/Chicago' });
+  assert.match(full, /## Today/);
+  assert.match(full, /- \[ \] \*\*원고 교정 2절\*\* · 1\/2 subtasks/);
+  assert.match(full, /- \[x\] 1절 반영/);
+  assert.match(full, /- \[ \] 각주 정리/);
+  assert.match(full, /### Changes made this day[\s\S]*Moved to Today/);
+  const compact = serializeMarkdown({ day, date: '2026-08-26', detail: 'compact', timezone: 'America/Chicago' });
+  assert.doesNotMatch(compact, /1절 반영|각주 정리/);
+});
+
 test('Tide and Loom activities are separate and Compact hides long source content', () => {
   const focus = { app: 'focus', id: 's1', kind: 'session', at: '2026-08-17T09:00:00-05:00', updatedAt: '2026-08-17T09:25:00-05:00', title: 'Focus session', data: { startedAt: '2026-08-17T09:00:00-05:00', endedAt: '2026-08-17T09:25:00-05:00', subject: 'Private subject', task: 'Private task', elapsedSeconds: 1500, completed: true } };
   const tide = { app: 'tide', id: 'c1:2026-08-17', kind: 'item-activity', at: '2026-08-17T10:00:00-05:00', updatedAt: '2026-08-17T10:05:00-05:00', title: 'Private clip title', data: { itemType: 'Clip', actions: ['copied', 'edited'], sourceDate: '2026-08-01', lastAt: '2026-08-17T10:05:00-05:00' } };

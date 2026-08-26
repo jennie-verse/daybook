@@ -9,8 +9,8 @@ test('PWA contains the production shell and approved icon assets', () => {
   for (const file of ['index.html', 'assets/app.css', 'src/app.js', 'src/store.js', 'src/deployment.js', 'src/sync.js', 'src/markdown.js', 'sw.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png']) assert.ok(existsSync(join(root, file)), file);
   assert.match(read('index.html'), /By app/); assert.match(read('index.html'), /Timeline/); assert.match(read('index.html'), /Markdown/); assert.match(read('index.html'), /Daily note/);
 });
-test('only the eight approved sources are registered', async () => {
-  const { SOURCE_APPS } = await import('../src/sources.js'); assert.deepEqual(SOURCE_APPS.map(({ id }) => id), ['tide', 'focus', 'loom', 'petal', 'folio', 'quill', 'slate', 'grove']);
+test('only the nine approved sources are registered', async () => {
+  const { SOURCE_APPS } = await import('../src/sources.js'); assert.deepEqual(SOURCE_APPS.map(({ id }) => id), ['tide', 'focus', 'loom', 'petal', 'folio', 'quill', 'slate', 'grove', 'today']);
   for (const excluded of ['vault', 'trace', 'atlas', 'shared']) assert.ok(!SOURCE_APPS.some(({ id }) => id === excluded));
 });
 test('central reader uses journal projections and no foreign app storage', () => {
@@ -83,7 +83,7 @@ test('the bundled font ships its licence', () => {
 test('the cache version moved with the shipped files', () => {
   // cache-first: leaving the version alone leaves installed devices on the old
   // files for ever.
-  assert.match(read('sw.js'), /const VERSION = '2026\.08\.26-journal8-activity1';/);
+  assert.match(read('sw.js'), /const VERSION = '2026\.08\.26-today-source';/);
 });
 
 test('account-portable settings report custom-domain sync configuration failures', () => {

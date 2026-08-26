@@ -7,7 +7,7 @@ const time = (iso) => safeText(iso).slice(11, 16);
 const clock = (mins) => `${String(Math.floor(Number(mins || 0) / 60)).padStart(2, '0')}:${String(Number(mins || 0) % 60).padStart(2, '0')}`;
 const duration = (seconds) => Math.max(0, Math.round(Number(seconds || 0) / 60));
 const codeSpan = (value) => { const body = safeText(value); const ticks = Math.max(1, ...(body.match(/`+/g) || []).map((match) => match.length + 1)); const fence = '`'.repeat(ticks); return `${fence}${body}${fence}`; };
-const actionLabel = (value) => ({ created: 'Created', added: 'Added', opened: 'Opened', read: 'Read', edited: 'Edited', copied: 'Copied', pinned: 'Pinned', unpinned: 'Unpinned', 'moved-to-today': 'Moved to today', moved: 'Moved', completed: 'Completed', reopened: 'Reopened', deleted: 'Deleted', exported: 'Exported', 'export-requested': 'Export requested' }[value] || value);
+const actionLabel = (value) => ({ created: 'Created', added: 'Added', opened: 'Opened', read: 'Read', edited: 'Edited', copied: 'Copied', pinned: 'Pinned', unpinned: 'Unpinned', 'moved-to-today': 'Moved to today', moved: 'Moved', completed: 'Completed', reopened: 'Reopened', deleted: 'Deleted', exported: 'Exported', 'export-requested': 'Export requested', promoted: 'Moved to Today', deferred: 'Moved to Someday' }[value] || value);
 const provenance = (record) => record.data?.importedHistory ? ` · Imported history (${record.data.historyAccuracy || 'inferred'})` : '';
 function tide(records, full) {
   const out = ['## Tide'];
@@ -28,6 +28,12 @@ function loom(records, full) {
   if (schedule.length) { out.push('', '### Schedule', ''); schedule.forEach((record) => { const data = record.data || {}; const lines = [`- [${data.done ? 'x' : ' '}] ${clock(data.start)}–${clock(Number(data.start || 0) + Number(data.duration || 0))} · **${mdText(record.title)}**${provenance(record)}`]; if (full && data.subtitle) lines.push(`  - Subtitle: ${mdText(data.subtitle)}`); if (full && data.note) lines.push(`  - Note: ${mdText(data.note)}`); if (full && data.detail) lines.push(`  - Detail: ${mdText(data.detail)}`); out.push(lines.join('\n')); }); }
   if (changes.length) { out.push('', '### Changes made this day', ''); changes.forEach((record) => { const data = record.data || {}; out.push(`- ${time(data.lastAt || record.at)} · ${(data.actions || []).map(actionLabel).join(', ')}${data.sourceDate ? ` · scheduled ${data.sourceDate}` : ''}${full && data.contentIncluded !== false && record.title ? ` · ${mdText(record.title)}` : ''}${provenance(record)}`); }); }
   return out.join('\n');
+}
+function today(records, full) {
+  const tasks = records.filter((record) => record.kind === 'task'); const activity = records.filter((record) => record.kind === 'task-activity'); const out = ['## Today'];
+  if (tasks.length) { out.push('', '### Tasks', ''); tasks.forEach((record) => { const data = record.data || {}; const lines = [`- [${data.done ? 'x' : ' '}] **${mdText(record.title)}**${data.subtaskCount ? ` · ${data.subtaskDoneCount || 0}/${data.subtaskCount} subtasks` : ''}${provenance(record)}`]; if (full && Array.isArray(data.subtasks)) data.subtasks.forEach((subtask) => lines.push(`  - [${subtask.done ? 'x' : ' '}] ${mdText(subtask.title)}`)); out.push(lines.join('\n')); }); }
+  if (activity.length) { out.push('', '### Changes made this day', ''); activity.forEach((record) => out.push(`- ${time(record.data?.lastAt || record.at)} · ${(record.data?.actions || []).map(actionLabel).join(', ')}${full && record.data?.contentIncluded !== false && record.title ? ` · ${mdText(record.title)}` : ''}${provenance(record)}`)); }
+  return out.join('\n').trimEnd();
 }
 function petal(records, full) {
   const out = ['## Petal'];
@@ -59,6 +65,7 @@ export function serializeMarkdown({ day, date, note = '', detail = 'full', timez
   if (day.apps?.tide?.length) sections.push(tide(day.apps.tide, detail === 'full'));
   if (day.apps?.focus?.length) sections.push(focus(day.apps.focus, detail === 'full'));
   if (day.apps?.loom?.length) sections.push(loom(day.apps.loom, detail === 'full'));
+  if (day.apps?.today?.length) sections.push(today(day.apps.today, detail === 'full'));
   if (day.apps?.petal?.length) sections.push(petal(day.apps.petal, detail === 'full'));
   if (folioNoteRecords(day.apps?.folio || []).length) sections.push(folio(day.apps.folio, detail === 'full'));
   if (FILE_APPS.some((app) => fileAppRecords(app, day.apps?.[app] || []).length)) sections.push(fileSections(day));

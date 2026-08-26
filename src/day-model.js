@@ -3,7 +3,7 @@ export const safeText = (value) => String(value ?? '').normalize('NFC');
 export const timeLabel = (iso) => { const parsed = new Date(iso); return Number.isNaN(parsed.getTime()) ? '--:--' : parsed.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); };
 const minutes = (seconds) => Math.max(0, Math.round(Number(seconds || 0) / 60));
 const clockFromMinutes = (value) => `${String(Math.floor(Number(value || 0) / 60)).padStart(2, '0')}:${String(Number(value || 0) % 60).padStart(2, '0')}`;
-const actionLabel = (action) => ({ created: 'Created', added: 'Added', opened: 'Opened', read: 'Read', edited: 'Edited', copied: 'Copied', pinned: 'Pinned', unpinned: 'Unpinned', 'moved-to-today': 'Moved to today', moved: 'Moved', completed: 'Completed', reopened: 'Reopened', deleted: 'Deleted', exported: 'Exported', 'export-requested': 'Export requested' }[action] || action);
+const actionLabel = (action) => ({ created: 'Created', added: 'Added', opened: 'Opened', read: 'Read', edited: 'Edited', copied: 'Copied', pinned: 'Pinned', unpinned: 'Unpinned', 'moved-to-today': 'Moved to today', moved: 'Moved', completed: 'Completed', reopened: 'Reopened', deleted: 'Deleted', exported: 'Exported', 'export-requested': 'Export requested', promoted: 'Moved to Today', deferred: 'Moved to Someday' }[action] || action);
 export function sourceSummary(app, records) {
   if (app === 'tide') return `${records.filter((r) => r.kind === 'clip').length} clips · ${records.filter((r) => r.kind === 'dump').length} dumps · ${records.filter((r) => r.kind === 'item-activity').length} activities`;
   if (app === 'focus') { const focus = records.filter((r) => r.data?.mode === 'focus'); return `${focus.length} focus · ${records.length - focus.length} breaks · ${minutes(focus.reduce((sum, r) => sum + Number(r.data?.elapsedSeconds || 0), 0))}m`; }
@@ -13,6 +13,7 @@ export function sourceSummary(app, records) {
     const notes = records.filter((record) => record.kind !== 'file-activity');
     if (notes.length) return `${new Set(notes.map((record) => record.data?.documentId || record.title)).size} documents · ${notes.length} notes`;
   }
+  if (app === 'today') { const tasks = records.filter((r) => r.kind === 'task'); return `${tasks.length} task${tasks.length === 1 ? '' : 's'} · ${tasks.filter((r) => r.data?.done).length} done`; }
   return `${records.length} item${records.length === 1 ? '' : 's'}`;
 }
 export function recordMeta(record) {
@@ -22,6 +23,7 @@ export function recordMeta(record) {
   if (record.app === 'loom') return record.kind === 'block-activity' ? [...(data.actions || []).map(actionLabel), data.sourceDate && `scheduled ${data.sourceDate}`].filter(Boolean).join(' · ') : `${clockFromMinutes(data.start)}–${clockFromMinutes(Number(data.start || 0) + Number(data.duration || 0))} · ${data.done ? 'Done' : 'Not done'}`;
   if (record.app === 'petal') { if (record.kind === 'reading-session') return `${Math.round(Number(data.startProgression || 0) * 100)}% → ${Math.round(Number(data.endProgression || 0) * 100)}% · ${minutes(data.activeSeconds)}m active`; return record.kind.replaceAll('-', ' '); }
   if (record.app === 'folio' && record.kind !== 'file-activity') return [record.kind.replaceAll('-', ' '), data.locationLabel].filter(Boolean).join(' · ');
+  if (record.app === 'today') return record.kind === 'task-activity' ? (data.actions || []).map(actionLabel).join(', ') : [data.done ? 'Done' : 'Today', data.subtaskCount ? `${data.subtaskDoneCount || 0}/${data.subtaskCount} subtasks` : ''].filter(Boolean).join(' · ');
   return (data.actions || []).map(actionLabel).join(', ');
 }
 export function recordBody(record) {
@@ -31,6 +33,7 @@ export function recordBody(record) {
   if (record.app === 'loom') return [data.subtitle, data.note, data.detail].filter(Boolean).join('\n');
   if (record.app === 'petal') return [data.author, data.chapterLabel, data.quote, data.note, data.definition, data.example, data.sentence, data.koreanNote].filter(Boolean).join('\n');
   if (record.app === 'folio' && record.kind !== 'file-activity') return [data.quote, data.note && `Note: ${data.note}`].filter(Boolean).join('\n');
+  if (record.app === 'today' && Array.isArray(data.subtasks)) return data.subtasks.map((s) => `${s.done ? '☑' : '☐'} ${safeText(s.title)}`).join('\n');
   return '';
 }
 export function petalGroups(records) {

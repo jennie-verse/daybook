@@ -77,3 +77,31 @@ phone에서의 Settings 도달 가능성 · 16px 미만 포커스 대상 없음 
 - **Pass — 브라우저:** desktop·390×844에서 Settings 8-source, Compact 안내, 가로 overflow 0, console warning/error 0.
 - **Pending — private E2E:** 실제 token으로 8개 source write → Daybook read → offline flush → redaction 확인은 사용자 credential 없이 실행하지 않음.
 - **Pending — 실기기:** iPhone/iPad Home Screen별 token/context 저장소와 Service Worker update는 실제 Safari에서 최종 확인 필요.
+
+## 2026-08-26 today 소스 등록 (A-1 선행 배포)
+
+계획서: `Plan/webapp-benchmark/Productivity_App_Benchmark_Plan_2026-08-26.md` A-1. `shared → daybook → today` 순서 중 2단계. today 앱 자체는 이후 커밋에서 배포되며, 이 커밋은 daybook이 today의 Journal 기록을 읽고 표시할 준비만 갖춥니다.
+
+### 바꾼 것
+
+- `src/sources.js` — `SOURCE_APPS`에 아홉 번째 항목 `{ id: 'today', label: 'Today', icon: '◉', href: '../today/' }` 추가. By app/Timeline/Settings 소스 상태는 전부 `SOURCE_APPS`를 순회하는 기존 코드를 그대로 쓰므로 별도 화면 코드 변경 없음.
+- `src/day-model.js` — `sourceSummary`·`recordMeta`·`recordBody`에 `today` 분기 추가 (task 개수·done 개수만 표시, 밀린 개수·연속기록은 표시하지 않음). `actionLabel`에 `promoted`/`deferred` 추가(additive).
+- `src/markdown.js` — `today()` 섹션 함수 추가(`## Today` → `### Tasks` 체크박스 목록 + 하위 단계는 full 모드에서만, `### Changes made this day`), `serializeMarkdown`에서 loom 다음에 호출. `actionLabel`에 동일하게 `promoted`/`deferred` 추가.
+- `tests/day-model.test.mjs` — 신규 파일. today summary/meta/body 3건.
+- `tests/markdown.test.mjs` — today 섹션 fixture 1건(체크박스, 하위 단계 full/compact 차이).
+- `tests/static.test.mjs` — "여덟 개" → "아홉 개" 소스 목록 갱신, 캐시 버전 정규식 갱신.
+- `sw.js` — 캐시 버전 `2026.08.26-journal8-activity1` → `2026.08.26-today-source` (캐시하는 파일 이름은 그대로지만 `sources.js`/`day-model.js`/`markdown.js` 내용이 바뀌었으므로 버전을 올림).
+
+### 통과
+
+- [x] `npm test` — **26/26 통과** (기존 23건 + 신규 3건)
+- [x] `npm run test:syntax` — 전체 통과
+- [x] today에 아직 아무 기록이 없어도(`day.apps.today`가 없거나 빈 배열) By app/Timeline/Markdown 전부 오류 없이 렌더링 (옵셔널 체이닝으로 가드됨)
+- [x] Journal은 `today` 앱이 `today`의 `task`/`task-activity` kind만 사용한다고 가정 — 이 커밋은 화면 표시만 하고 today 저장소를 직접 열지 않음(`central reader uses journal projections and no foreign app storage` 테스트로 고정)
+- [x] 기존 8개 앱의 by-app/Timeline/Markdown 출력에 회귀 없음 (기존 23개 테스트 그대로 통과)
+- [x] 콘솔 오류 0건, 절대경로·외부 URL 없음(기존 정적 검사 통과)
+
+### Pending — 실기기 및 today 배포 이후
+
+- [ ] today 앱 배포 완료 후, 실제 today 기기에서 Journal 기록을 올린 뒤 daybook의 By app/Timeline/Markdown 세 화면에서 실제로 보이는지 확인
+- [ ] iPhone/iPad Home Screen에서 새 daybook Service Worker 캐시로 갱신되는지
