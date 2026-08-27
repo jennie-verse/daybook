@@ -14,6 +14,7 @@ export function sourceSummary(app, records) {
     if (notes.length) return `${new Set(notes.map((record) => record.data?.documentId || record.title)).size} documents · ${notes.length} notes`;
   }
   if (app === 'today') { const tasks = records.filter((r) => r.kind === 'task'); return `${tasks.length} task${tasks.length === 1 ? '' : 's'} · ${tasks.filter((r) => r.data?.done).length} done`; }
+  if (app === 'cove') { const saved = records.filter((r) => r.kind === 'link-saved').length; const read = records.filter((r) => r.kind === 'link-activity' && (r.data?.actions || []).includes('opened')).length; const highlights = records.filter((r) => r.kind === 'highlight-created').length; return `${saved} saved · ${read} read · ${highlights} highlights`; }
   return `${records.length} item${records.length === 1 ? '' : 's'}`;
 }
 export function recordMeta(record) {
@@ -24,6 +25,7 @@ export function recordMeta(record) {
   if (record.app === 'petal') { if (record.kind === 'reading-session') return `${Math.round(Number(data.startProgression || 0) * 100)}% → ${Math.round(Number(data.endProgression || 0) * 100)}% · ${minutes(data.activeSeconds)}m active`; return record.kind.replaceAll('-', ' '); }
   if (record.app === 'folio' && record.kind !== 'file-activity') return [record.kind.replaceAll('-', ' '), data.locationLabel].filter(Boolean).join(' · ');
   if (record.app === 'today') return record.kind === 'task-activity' ? (data.actions || []).map(actionLabel).join(', ') : [data.done ? 'Done' : 'Today', data.subtaskCount ? `${data.subtaskDoneCount || 0}/${data.subtaskCount} subtasks` : ''].filter(Boolean).join(' · ');
+  if (record.app === 'cove') return record.kind === 'link-activity' ? (data.actions || []).map(actionLabel).join(', ') : ({'link-saved':'Saved','highlight-created':'Highlighted','highlight-updated':'Highlight updated','note-created':'Note added','note-updated':'Note updated','excerpt-exported':'Exported'}[record.kind] || record.kind);
   return (data.actions || []).map(actionLabel).join(', ');
 }
 export function recordBody(record) {

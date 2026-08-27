@@ -8,6 +8,7 @@ export const SOURCE_APPS = Object.freeze([
   { id: 'slate', label: 'Slate', icon: '◇', href: '../slate/' },
   { id: 'grove', label: 'Grove', icon: '⌘', href: '../grove/' },
   { id: 'today', label: 'Today', icon: '◉', href: '../today/' },
+  { id: 'cove', label: 'Cove', icon: '◡', href: '../cove/' },
 ]);
 export const SOURCE_BY_ID = new Map(SOURCE_APPS.map((source) => [source.id, source]));
 export const FILE_APPS = Object.freeze(['folio', 'quill', 'slate', 'grove']);

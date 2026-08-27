@@ -9,14 +9,14 @@ test('PWA contains the production shell and approved icon assets', () => {
   for (const file of ['index.html', 'assets/app.css', 'src/app.js', 'src/store.js', 'src/deployment.js', 'src/sync.js', 'src/markdown.js', 'sw.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png']) assert.ok(existsSync(join(root, file)), file);
   assert.match(read('index.html'), /By app/); assert.match(read('index.html'), /Timeline/); assert.match(read('index.html'), /Markdown/); assert.match(read('index.html'), /Daily note/);
 });
-test('only the nine approved sources are registered', async () => {
-  const { SOURCE_APPS } = await import('../src/sources.js'); assert.deepEqual(SOURCE_APPS.map(({ id }) => id), ['tide', 'focus', 'loom', 'petal', 'folio', 'quill', 'slate', 'grove', 'today']);
+test('only the ten approved sources are registered', async () => {
+  const { SOURCE_APPS } = await import('../src/sources.js'); assert.deepEqual(SOURCE_APPS.map(({ id }) => id), ['tide', 'focus', 'loom', 'petal', 'folio', 'quill', 'slate', 'grove', 'today', 'cove']);
   for (const excluded of ['vault', 'trace', 'atlas', 'shared']) assert.ok(!SOURCE_APPS.some(({ id }) => id === excluded));
 });
 test('the source summary is derived from the registered source list', () => {
   assert.match(read('src/app.js'), /`\$\{SOURCE_APPS\.length\} sources/);
   assert.doesNotMatch(read('src/app.js'), /`8 sources/);
-  assert.match(read('index.html'), />9 sources · not refreshed</);
+  assert.match(read('index.html'), />10 sources · not refreshed</);
 });
 test('central reader uses journal projections and no foreign app storage', () => {
   const sync = read('src/sync.js'); assert.match(sync, /journal\.readDate/); assert.doesNotMatch(sync, /events\//); assert.doesNotMatch(sync, /indexedDB\.open/); assert.doesNotMatch(sync, /context.*activity/i);
@@ -90,7 +90,7 @@ test('the bundled font ships its licence', () => {
 test('the cache version moved with the shipped files', () => {
   // cache-first: leaving the version alone leaves installed devices on the old
   // files for ever.
-  assert.match(read('sw.js'), /const VERSION = '2026\.08\.26-source-touch1';/);
+  assert.match(read('sw.js'), /const VERSION = '2026\.08\.27-cove-source';/);
 });
 
 test('account-portable settings report custom-domain sync configuration failures', () => {
