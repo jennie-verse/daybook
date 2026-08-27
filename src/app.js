@@ -86,7 +86,7 @@ function markdown() { return serializeMarkdown({ day: state.day || emptyDay(stat
 function render() {
   document.documentElement.style.setProperty('--base-size', `${state.textSize}px`); updateDateHeader(); const host = $('view-host'); host.replaceChildren(state.view === 'timeline' ? renderTimeline() : state.view === 'markdown' ? renderMarkdown() : renderByApp());
   document.querySelectorAll('[data-view]').forEach((button) => { const active = button.dataset.view === state.view; button.setAttribute('aria-selected', String(active)); if (button.closest('.bottom-nav')) active ? button.setAttribute('aria-current', 'page') : button.removeAttribute('aria-current'); });
-  const appCount = new Set((state.day?.records || []).map((record) => record.app)).size; $('source-summary').textContent = `8 sources · ${appCount} with records`; $('freshness').textContent = state.day?.refreshedAt ? `${appCount} apps · Updated ${timeLabel(state.day.refreshedAt)}` : 'Not refreshed yet';
+  const appCount = new Set((state.day?.records || []).map((record) => record.app)).size; $('source-summary').textContent = `${SOURCE_APPS.length} sources · ${appCount} with records`; $('freshness').textContent = state.day?.refreshedAt ? `${appCount} apps · Updated ${timeLabel(state.day.refreshedAt)}` : 'Not refreshed yet';
 }
 function setBanner() {
   const banner = $('connection-state'); banner.className = 'state-banner'; let text = '';

@@ -13,6 +13,11 @@ test('only the nine approved sources are registered', async () => {
   const { SOURCE_APPS } = await import('../src/sources.js'); assert.deepEqual(SOURCE_APPS.map(({ id }) => id), ['tide', 'focus', 'loom', 'petal', 'folio', 'quill', 'slate', 'grove', 'today']);
   for (const excluded of ['vault', 'trace', 'atlas', 'shared']) assert.ok(!SOURCE_APPS.some(({ id }) => id === excluded));
 });
+test('the source summary is derived from the registered source list', () => {
+  assert.match(read('src/app.js'), /`\$\{SOURCE_APPS\.length\} sources/);
+  assert.doesNotMatch(read('src/app.js'), /`8 sources/);
+  assert.match(read('index.html'), />9 sources · not refreshed</);
+});
 test('central reader uses journal projections and no foreign app storage', () => {
   const sync = read('src/sync.js'); assert.match(sync, /journal\.readDate/); assert.doesNotMatch(sync, /events\//); assert.doesNotMatch(sync, /indexedDB\.open/); assert.doesNotMatch(sync, /context.*activity/i);
 });
@@ -50,6 +55,8 @@ test('touch targets meet the 44px rule', () => {
   assert.match(css, /\.icon-button\.small\{width:44px/);
   assert.match(css, /\.rail-tabs button\{[^}]*min-height:44px/);
   assert.match(css, /\.source-status\{[^}]*min-height:44px/);
+  assert.match(css, /\.segmented button\{[^}]*min-height:44px/);
+  assert.match(css, /\.markdown-actions button,[^}]*min-height:44px/);
   for (const block of css.match(/\.bottom-nav button\{[^}]*\}/g) || []) assert.match(block, /min-height:4[4-9]px|min-height:[5-9]\dpx/, block);
 });
 test('every queued note is flushed, not only the day on screen', () => {
@@ -83,7 +90,7 @@ test('the bundled font ships its licence', () => {
 test('the cache version moved with the shipped files', () => {
   // cache-first: leaving the version alone leaves installed devices on the old
   // files for ever.
-  assert.match(read('sw.js'), /const VERSION = '2026\.08\.26-today-source';/);
+  assert.match(read('sw.js'), /const VERSION = '2026\.08\.26-source-touch1';/);
 });
 
 test('account-portable settings report custom-domain sync configuration failures', () => {
