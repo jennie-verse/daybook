@@ -83,14 +83,14 @@ test('a remembered date is validated before it is trusted', () => {
   assert.match(read('src/app.js'), /const rememberedDate = \(\)/);
 });
 test('the bundled font ships its licence', () => {
-  // webapp-standard.md 3: bundle Lexend for offline use, licence file included.
+  // WebApp_House_Style.md 3: bundle Lexend for offline use, licence file included.
   assert.ok(existsSync(join(root, 'licenses/Lexend-OFL.txt')));
   assert.ok(existsSync(join(root, 'THIRD_PARTY_NOTICES.md')));
 });
 test('the cache version moved with the shipped files', () => {
   // cache-first: leaving the version alone leaves installed devices on the old
   // files for ever.
-  assert.match(read('sw.js'), /const VERSION = '2026\.08\.27-iconpalette1';/);
+  assert.match(read('sw.js'), /const VERSION = '2026\.08\.27-iconpalette2';/);
 });
 
 test('account-portable settings report custom-domain sync configuration failures', () => {
