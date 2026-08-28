@@ -52,7 +52,7 @@ iPhone 가로에서 rail이 노출되던 차이는 최종 CSS에서 수정했습
 | 4 | 성능 | **글자 하나 칠 때마다 IndexedDB를 두 번 열고 닫음** (10자에 `open()` 20회). 메모와 outbox를 매 입력마다 쓰는데 연결을 재사용하지 않았습니다 |
 | 5 | 접근성 | 44px 미만 터치 영역 — Refresh 38×32, rail today 34×34, rail 탭 39px, 소스 상태 40px, 가로 화면 하단 탭 42px, skip link 35px |
 | 6 | 콘솔 경고 | CSP `frame-ancestors` 는 `<meta>` 로 전달되면 브라우저가 무시하고 **매 로드마다 경고**합니다. GitHub Pages는 응답 헤더를 넣을 수 없으므로 제거했습니다 |
-| 7 | 기준 미준수 | Lexend를 내장하면서 **라이선스 파일을 동봉하지 않음** (`webapp-standard.md` 3장) |
+| 7 | 기준 미준수 | Lexend를 내장하면서 **라이선스 파일을 동봉하지 않음** (`WebApp_House_Style.md` 3장) |
 | 8 | 사소 | `localStorage` 의 `daybook.date` 를 검증 없이 신뢰 — 값이 깨지면 달력이 빈 채로 그려집니다 |
 | 9 | 사소 | `.gitignore` 가 없어 `.DS_Store` 가 추적되지 않은 채 남음 |
 
