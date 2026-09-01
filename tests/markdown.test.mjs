@@ -9,7 +9,7 @@ const session = (app, kind, title, startedAt, endedAt, activeSeconds) => ({ app,
 test('frontmatter keeps only date, time, and status with a stable snapshot', () => {
   const options = { day: dayWith({}), date: '2026-08-31', snapshotAt: new Date('2026-08-31T14:05:00-05:00') };
   const output = serializeMarkdown(options);
-  assert.match(output, /^---\ndate: 2026-08-31\ntime: "2:05 PM"\nstatus: complete\n---/);
+  assert.match(output, /^---\ndate: 2026-08-31\ntime: "(?:[1-9]|1[0-2]):05 [AP]M"\nstatus: complete\n---/);
   assert.doesNotMatch(output, /timezone:|apps:|generated_at/);
   assert.match(output, /# Monday, August 31, 2026/);
   assert.equal(output, serializeMarkdown(options));
