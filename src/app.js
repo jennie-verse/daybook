@@ -21,7 +21,7 @@ const isDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value) && value <= today();
 const rememberedDate = () => { const saved = read('daybook.date', ''); return isDate(saved) ? saved : today(); };
 const state = {
   date: rememberedDate(), view: read('daybook.view', 'by-app'), token: read('sync.token.v1'), context: read('daybook.context'),
-  textSize: read('daybook.textSize', '12'), markdownDetail: read('daybook.markdownDetail', 'full'), day: null, note: '', statuses: {}, availability: new Map(), refreshing: false,
+  textSize: read('daybook.textSize', '12'), markdownDetail: read('daybook.markdownDetail', 'full'), day: null, note: '', markdownSnapshotAt: null, statuses: {}, availability: new Map(), refreshing: false,
 };
 let noteTimer = null; let composing = false; let toastTimer = null; let lastRemoteRefreshAt = 0; let resumeTimer = null;
 const node = (tag, className, text) => { const element = document.createElement(tag); if (className) element.className = className; if (text !== undefined) element.textContent = text; return element; };
@@ -75,14 +75,25 @@ function renderSafeMarkdownPreview(host, value) {
   value.split('\n').forEach((line) => {
     if (line === '---') { frontmatter = !frontmatter; return; }
     if (frontmatter || !line.trim()) return;
-    const heading = line.match(/^(#{1,3})\s+(.*)$/);
+    const heading = line.match(/^(#{1,4})\s+(.*)$/);
     if (heading) { host.append(node(`h${heading[1].length}`, '', heading[2])); return; }
     if (line.startsWith('> ')) { host.append(node('blockquote', '', line.slice(2))); return; }
-    if (/^- /.test(line)) { host.append(node('p', 'preview-list-item', `• ${line.slice(2)}`)); return; }
+    const task = line.match(/^- \[([ x])\] (.*)$/i);
+    if (task) { const row = node('p', 'preview-task'); const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.disabled = true; checkbox.checked = task[1].toLowerCase() === 'x'; row.append(checkbox); appendPreviewInline(row, task[2]); host.append(row); return; }
+    if (/^- /.test(line)) { const row = node('p', 'preview-list-item', '• '); appendPreviewInline(row, line.slice(2)); host.append(row); return; }
     host.append(node('p', '', line));
   });
 }
-function markdown() { return serializeMarkdown({ day: state.day || emptyDay(state.date), date: state.date, note: state.note, detail: state.markdownDetail }); }
+function appendPreviewInline(host, value) {
+  const pattern = /(~~[^~]+~~|`[^`]+`|\*[^*]+\*)/g; let offset = 0;
+  for (const match of value.matchAll(pattern)) {
+    if (match.index > offset) host.append(document.createTextNode(value.slice(offset, match.index)));
+    const token = match[0]; const element = token.startsWith('~~') ? node('del', '', token.slice(2, -2)) : token.startsWith('`') ? node('code', '', token.slice(1, -1)) : node('em', '', token.slice(1, -1)); host.append(element); offset = match.index + token.length;
+  }
+  if (offset < value.length) host.append(document.createTextNode(value.slice(offset)));
+}
+function invalidateMarkdownSnapshot() { state.markdownSnapshotAt = null; }
+function markdown() { state.markdownSnapshotAt ||= new Date(); return serializeMarkdown({ day: state.day || emptyDay(state.date), date: state.date, note: state.note, detail: state.markdownDetail, snapshotAt: state.markdownSnapshotAt }); }
 function render() {
   document.documentElement.style.setProperty('--base-size', `${state.textSize}px`); updateDateHeader(); const host = $('view-host'); host.replaceChildren(state.view === 'timeline' ? renderTimeline() : state.view === 'markdown' ? renderMarkdown() : renderByApp());
   document.querySelectorAll('[data-view]').forEach((button) => { const active = button.dataset.view === state.view; button.setAttribute('aria-selected', String(active)); if (button.closest('.bottom-nav')) active ? button.setAttribute('aria-current', 'page') : button.removeAttribute('aria-current'); });
@@ -98,6 +109,7 @@ function setBanner() {
   banner.textContent = text; banner.hidden = !text;
 }
 async function loadDay({ remote = true } = {}) {
+  invalidateMarkdownSnapshot();
   if (state.refreshing) return; state.refreshing = true; $('refresh-button').disabled = true; $('freshness').textContent = 'Refreshing…';
   try {
     state.day = await refreshDay(state.date, remote ? state.token : ''); if (remote && state.token) lastRemoteRefreshAt = Date.now(); const cachedDays = await listItems('days'); state.availability = new Map(cachedDays.map((day) => [day.date || day.key, new Set((day.records || []).map((record) => record.app)).size]).filter(([, count]) => count)); const note = remote && state.token ? await reconcileNote(state.date, state.token) : await readLocalNote(state.date); state.note = note?.markdown || ''; $('note-text').value = state.note; $('note-status').textContent = 'Saved on this device'; setBanner(); render();
@@ -108,7 +120,7 @@ async function changeDate(date) { if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date 
 function shiftDay(amount) { const date = new Date(`${state.date}T12:00:00`); date.setDate(date.getDate() + amount); changeDate(localDate(date)); }
 function setView(view) { state.view = view; write('daybook.view', view); render(); }
 async function persistNote() {
-  state.note = $('note-text').value.normalize('NFC'); await saveLocalNote(state.date, state.note); $('note-status').textContent = 'Saved on this device · waiting to sync'; clearTimeout(noteTimer); noteTimer = setTimeout(() => flushOutbox(), 4000);
+  state.note = $('note-text').value.normalize('NFC'); invalidateMarkdownSnapshot(); await saveLocalNote(state.date, state.note); $('note-status').textContent = 'Saved on this device · waiting to sync'; clearTimeout(noteTimer); noteTimer = setTimeout(() => flushOutbox(), 4000);
 }
 /**
  * Push every queued note, not only the day on screen.
@@ -137,7 +149,7 @@ async function openSettings() {
   $('token-input').value = ''; $('token-status').textContent = state.token ? `Saved token ending in ••••${state.token.slice(-4)}` : 'No token saved'; $('context-input').value = read('daybook.contextLabel'); $('text-size').value = state.textSize; $('markdown-detail').value = state.markdownDetail; $('cache-size').textContent = `Activity cache: ${Math.max(1, Math.round((await getCacheBytes()) / 1024))} KB`; await renderStatuses(); $('settings-dialog').showModal();
 }
 async function saveSettings() {
-  const entered = $('token-input').value.trim(); if (entered) { state.token = entered; write('sync.token.v1', entered); } const label = $('context-input').value.trim() || 'daybook'; if (!state.context) state.context = makeContext(label); write('daybook.context', state.context); write('daybook.contextLabel', label); state.textSize = $('text-size').value; state.markdownDetail = $('markdown-detail').value; write('daybook.textSize', state.textSize); write('daybook.markdownDetail', state.markdownDetail); await loadDay();
+  const entered = $('token-input').value.trim(); if (entered) { state.token = entered; write('sync.token.v1', entered); } const label = $('context-input').value.trim() || 'daybook'; if (!state.context) state.context = makeContext(label); write('daybook.context', state.context); write('daybook.contextLabel', label); state.textSize = $('text-size').value; state.markdownDetail = $('markdown-detail').value; invalidateMarkdownSnapshot(); write('daybook.textSize', state.textSize); write('daybook.markdownDetail', state.markdownDetail); await loadDay();
 }
 function bind() {
   $('previous-day').onclick = () => shiftDay(-1); $('next-day').onclick = () => shiftDay(1); $('today-button').onclick = $('rail-today').onclick = () => changeDate(today()); $('date-button').onclick = () => $('date-dialog').showModal(); $('choose-date').onclick = () => changeDate($('date-input').value); $('refresh-button').onclick = () => loadDay(); $('open-settings').onclick = openSettings; $('open-settings-compact').onclick = openSettings; $('settings-refresh').onclick = async () => { await renderStatuses(); toast('Source status refreshed'); }; $('save-settings').onclick = saveSettings;

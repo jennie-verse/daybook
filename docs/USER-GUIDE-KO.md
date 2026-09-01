@@ -6,6 +6,15 @@
 - **Timeline**: 모든 record를 시간순으로 표시합니다. Details 또는 Show source text로 긴 원문을 펼칠 수 있습니다.
 - **Markdown**: 안전한 Preview와 Source를 전환하고, 같은 serializer 결과를 복사하거나 `journal-YYYY-MM-DD.md`로 다운로드합니다.
 
+## Markdown Export 형식 (2026-09-01)
+
+- Properties는 `date`, export snapshot `time`, `status`만 포함합니다. `timezone`과 `apps`는 제외합니다.
+- 모든 시각은 AM/PM으로 표시합니다. 같은 AM/PM 안의 구간은 `10:02–10:32 AM`, 경계를 넘으면 `11:50 AM–12:10 PM`처럼 씁니다.
+- Focus는 `시간 · (실제 분량) · 주제`만 표시합니다.
+- Today는 그날 Today/Someday에 추가된 결과를 나누며, 완료는 `[x]`, 미완료는 `[ ] ~~할 일~~`로 표시합니다.
+- Folio·Petal·Cove는 읽기 시작/종료 시각과 활성 분량을, Slate·Grove는 사용 시작/종료 시각과 활성 분량을 표시합니다. 기존 기록만 있는 과거 날짜에는 새 세션 줄이 소급 생성되지 않습니다.
+- Tide는 기록 시각과 내용만 표시합니다. Full/Compact 설정은 메모·인용 같은 긴 본문의 포함 범위에만 영향을 줍니다.
+
 ## 오프라인과 실패
 
 - 네트워크가 없으면 마지막으로 성공한 날짜 캐시와 Daily note를 계속 읽을 수 있습니다.

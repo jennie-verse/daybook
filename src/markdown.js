@@ -1,74 +1,108 @@
-import { FILE_APPS, SOURCE_APPS } from './sources.js';
-import { appIdsWithRecords } from './merge.js';
-import { fileAppRecords, folioGroups, folioNoteRecords, petalGroups, safeText } from './day-model.js';
+import { folioGroups, folioNoteRecords, petalGroups, safeText } from './day-model.js';
+
 const mdText = (value) => safeText(value).replace(/([\\`*_[\]{}<>#+.!|~-])/g, '\\$1');
 const quote = (value) => safeText(value).split('\n').map((line) => `> ${line}`).join('\n');
-const time = (iso) => safeText(iso).slice(11, 16);
-const clock = (mins) => `${String(Math.floor(Number(mins || 0) / 60)).padStart(2, '0')}:${String(Number(mins || 0) % 60).padStart(2, '0')}`;
-const duration = (seconds) => Math.max(0, Math.round(Number(seconds || 0) / 60));
 const codeSpan = (value) => { const body = safeText(value); const ticks = Math.max(1, ...(body.match(/`+/g) || []).map((match) => match.length + 1)); const fence = '`'.repeat(ticks); return `${fence}${body}${fence}`; };
-const actionLabel = (value) => ({ created: 'Created', added: 'Added', opened: 'Opened', read: 'Read', edited: 'Edited', copied: 'Copied', pinned: 'Pinned', unpinned: 'Unpinned', 'moved-to-today': 'Moved to today', moved: 'Moved', completed: 'Completed', reopened: 'Reopened', deleted: 'Deleted', exported: 'Exported', 'export-requested': 'Export requested', promoted: 'Moved to Today', deferred: 'Moved to Someday' }[value] || value);
-const provenance = (record) => record.data?.importedHistory ? ` · Imported history (${record.data.historyAccuracy || 'inferred'})` : '';
-function tide(records, full) {
-  const out = ['## Tide'];
-  for (const kind of ['clip', 'dump']) {
-    const items = records.filter((record) => record.kind === kind); if (!items.length) continue;
-    out.push('', `### ${kind === 'clip' ? 'Clips' : 'Dump'}`, '');
-    items.forEach((record) => { out.push(`- ${time(record.at)}${record.data?.label ? ` · **${mdText(record.data.label)}**` : ''}${record.data?.type ? ` · ${mdText(record.data.type)}` : ''}${provenance(record)}`); if (full && record.data?.text) out.push('', quote(record.data.text), ''); });
+const parts = (iso) => { const match = safeText(iso).match(/T(\d{2}):(\d{2})/); return match ? { hour: Number(match[1]), minute: Number(match[2]) } : null; };
+const clockParts = ({ hour, minute }) => `${hour % 12 || 12}:${String(minute).padStart(2, '0')} ${hour < 12 ? 'AM' : 'PM'}`;
+export const formatClock = (iso) => { const value = parts(iso); return value ? clockParts(value) : '--:--'; };
+export const formatTimeRange = (startIso, endIso) => {
+  const start = parts(startIso); const end = parts(endIso); if (!start || !end) return '--:--';
+  const startPeriod = start.hour < 12 ? 'AM' : 'PM'; const endPeriod = end.hour < 12 ? 'AM' : 'PM';
+  const startClock = `${start.hour % 12 || 12}:${String(start.minute).padStart(2, '0')}`;
+  const endClock = `${end.hour % 12 || 12}:${String(end.minute).padStart(2, '0')} ${endPeriod}`;
+  return startPeriod === endPeriod ? `${startClock}–${endClock}` : `${startClock} ${startPeriod}–${endClock}`;
+};
+export const formatDuration = (seconds) => {
+  const value = Math.max(0, Number(seconds) || 0); if (value <= 0) return '';
+  if (value < 60) return '<1m'; const minutes = Math.round(value / 60); const hours = Math.floor(minutes / 60); const rest = minutes % 60;
+  return hours ? `${hours}h${rest ? ` ${rest}m` : ''}` : `${minutes}m`;
+};
+const sessionLine = (record, target, suffix = '') => {
+  const data = record.data || {}; const value = formatDuration(data.activeSeconds ?? data.elapsedSeconds);
+  return `- ${formatTimeRange(data.startedAt, data.endedAt)}${value ? ` · (${value})` : ''} · ${target}${suffix}`;
+};
+const rangeFromMinutes = (start, duration) => {
+  const a = Number(start || 0); const b = a + Number(duration || 0);
+  const iso = (value) => `2000-01-01T${String(Math.floor(value / 60) % 24).padStart(2, '0')}:${String(value % 60).padStart(2, '0')}:00+00:00`;
+  return formatTimeRange(iso(a), iso(b));
+};
+
+function focus(records) {
+  const rows = records.filter((record) => record.kind === 'session').map((record) => {
+    const data = record.data || {}; const target = data.subject || data.task || (data.mode === 'break' ? 'Break' : 'Focus');
+    return sessionLine({ ...record, data: { ...data, activeSeconds: data.elapsedSeconds } }, mdText(target));
+  });
+  return rows.length ? ['## Focus', '', ...rows].join('\n') : '';
+}
+function today(records) {
+  const tasks = new Map(records.filter((record) => record.kind === 'task').map((record) => [record.id, record]));
+  const entries = new Map();
+  records.filter((record) => record.kind === 'task-activity').forEach((record) => {
+    const data = record.data || {}; const actions = data.actions || []; const taskId = record.id.replace(/:\d{4}-\d{2}-\d{2}$/, ''); const task = tasks.get(taskId);
+    const destination = data.destination || (actions.includes('deferred') ? 'someday' : actions.includes('promoted') ? 'today' : task ? 'today' : '');
+    if (!destination || actions.includes('deleted')) return;
+    entries.set(taskId, { title: record.title || task?.title || 'Today task', destination, done: data.done === true || data.finalStatus === 'done' || actions.includes('completed') || task?.data?.done === true, at: data.lastAt || record.updatedAt || record.at });
+  });
+  tasks.forEach((task, id) => { if (!entries.has(id)) entries.set(id, { title: task.title, destination: 'today', done: task.data?.done === true, at: task.at }); });
+  const out = ['## Today'];
+  for (const [destination, heading] of [['today', 'Added to Today'], ['someday', 'Added to Someday']]) {
+    const rows = [...entries.values()].filter((entry) => entry.destination === destination).sort((a, b) => String(a.at).localeCompare(String(b.at)));
+    if (!rows.length) continue; out.push('', `### ${heading}`, '');
+    rows.forEach((entry) => out.push(entry.done ? `- [x] ${mdText(entry.title)}` : `- [ ] ~~${mdText(entry.title)}~~`));
   }
-  const activity = records.filter((record) => record.kind === 'item-activity');
-  if (activity.length) { out.push('', '### Activity', ''); activity.forEach((record) => out.push(`- ${time(record.data?.lastAt || record.at)} · ${mdText(record.data?.itemType || 'Item')} · ${(record.data?.actions || []).map(actionLabel).join(', ')}${full && record.data?.contentIncluded !== false && record.title ? ` · ${mdText(record.title)}` : ''}${provenance(record)}`)); }
+  return out.length > 1 ? out.join('\n') : '';
+}
+
+function folio(records, full) {
+  const sessions = records.filter((record) => record.kind === 'reading-session'); const notes = folioNoteRecords(records); if (!sessions.length && !notes.length) return '';
+  const out = ['## Folio'];
+  if (sessions.length) { out.push(''); sessions.forEach((record) => out.push(sessionLine(record, codeSpan(record.title)))); }
+  if (full && notes.length) {
+    out.push('', '### Notes');
+    folioGroups(notes).forEach((group) => { out.push('', `#### ${mdText(group.title)}`, ''); group.records.forEach((record) => { const data = record.data || {}; out.push(`- ${formatClock(record.at)}${data.locationLabel ? ` · ${mdText(data.locationLabel)}` : ''}`); if (data.quote) out.push('', quote(data.quote), ''); if (data.note) out.push(`  Note: ${mdText(data.note)}`); }); });
+  }
   return out.join('\n').trimEnd();
 }
-function focus(records, full) {
-  return ['## Focus', '', ...records.map((record) => { const data = record.data || {}; const details = full ? [data.subject && `  - Subject: ${mdText(data.subject)}`, data.task && `  - Task: ${mdText(data.task)}`].filter(Boolean) : []; return [`- ${time(data.startedAt)}–${time(data.endedAt)} · **${mdText(record.title)}** · ${duration(data.elapsedSeconds)}m${data.plannedSeconds ? ` / planned ${duration(data.plannedSeconds)}m` : ''} · ${data.completed ? 'Completed' : 'Stopped'}${provenance(record)}`, ...details].join('\n'); })].join('\n');
+
+function petal(records, full) {
+  const out = ['## Petal']; let count = 0;
+  petalGroups(records).forEach((book) => {
+    book.records.filter((record) => record.kind === 'reading-session').forEach((record) => { const data = record.data || {}; out.push('', sessionLine(record, `*${mdText(book.title)}*`, ` · ${Math.round(Number(data.startProgression || 0) * 100)}% → ${Math.round(Number(data.endProgression || 0) * 100)}%`)); count += 1; });
+    if (full) book.records.filter((record) => record.kind !== 'reading-session').forEach((record) => { const data = record.data || {}; out.push('', `- ${formatClock(record.at)} · ${mdText(book.title)} · ${mdText(record.kind.replaceAll('-', ' '))}`); if (data.quote) out.push('', quote(data.quote)); if (data.note) out.push(`  Note: ${mdText(data.note)}`); count += 1; });
+  });
+  return count ? out.join('\n').trimEnd() : '';
+}
+
+function cove(records) {
+  const rows = records.filter((record) => record.kind === 'reading-session').map((record) => sessionLine(record, mdText(record.title)));
+  return rows.length ? ['## Cove', '', ...rows].join('\n') : '';
+}
+function tide(records, full) {
+  const rows = []; records.filter((record) => record.kind === 'clip' || record.kind === 'dump').forEach((record) => { rows.push(`- ${formatClock(record.at)}`); if (full && record.data?.text) rows.push('', quote(record.data.text), ''); });
+  return rows.length ? ['## Tide', '', ...rows].join('\n').trimEnd() : '';
 }
 function loom(records, full) {
-  const schedule = records.filter((record) => record.kind === 'block'); const changes = records.filter((record) => record.kind === 'block-activity'); const out = ['## Loom'];
-  if (schedule.length) { out.push('', '### Schedule', ''); schedule.forEach((record) => { const data = record.data || {}; const lines = [`- [${data.done ? 'x' : ' '}] ${clock(data.start)}–${clock(Number(data.start || 0) + Number(data.duration || 0))} · **${mdText(record.title)}**${provenance(record)}`]; if (full && data.subtitle) lines.push(`  - Subtitle: ${mdText(data.subtitle)}`); if (full && data.note) lines.push(`  - Note: ${mdText(data.note)}`); if (full && data.detail) lines.push(`  - Detail: ${mdText(data.detail)}`); out.push(lines.join('\n')); }); }
-  if (changes.length) { out.push('', '### Changes made this day', ''); changes.forEach((record) => { const data = record.data || {}; out.push(`- ${time(data.lastAt || record.at)} · ${(data.actions || []).map(actionLabel).join(', ')}${data.sourceDate ? ` · scheduled ${data.sourceDate}` : ''}${full && data.contentIncluded !== false && record.title ? ` · ${mdText(record.title)}` : ''}${provenance(record)}`); }); }
-  return out.join('\n');
+  const blocks = records.filter((record) => record.kind === 'block'); if (!blocks.length) return '';
+  const out = ['## Loom', '']; blocks.forEach((record) => { const data = record.data || {}; out.push(`- [${data.done ? 'x' : ' '}] ${rangeFromMinutes(data.start, data.duration)} · ${mdText(record.title)}`); if (full && data.note) out.push(`  - ${mdText(data.note)}`); }); return out.join('\n');
 }
-function today(records, full) {
-  const tasks = records.filter((record) => record.kind === 'task'); const activity = records.filter((record) => record.kind === 'task-activity'); const out = ['## Today'];
-  if (tasks.length) { out.push('', '### Tasks', ''); tasks.forEach((record) => { const data = record.data || {}; const lines = [`- [${data.done ? 'x' : ' '}] **${mdText(record.title)}**${data.subtaskCount ? ` · ${data.subtaskDoneCount || 0}/${data.subtaskCount} subtasks` : ''}${provenance(record)}`]; if (full && Array.isArray(data.subtasks)) data.subtasks.forEach((subtask) => lines.push(`  - [${subtask.done ? 'x' : ' '}] ${mdText(subtask.title)}`)); out.push(lines.join('\n')); }); }
-  if (activity.length) { out.push('', '### Changes made this day', ''); activity.forEach((record) => out.push(`- ${time(record.data?.lastAt || record.at)} · ${(record.data?.actions || []).map(actionLabel).join(', ')}${full && record.data?.contentIncluded !== false && record.title ? ` · ${mdText(record.title)}` : ''}${provenance(record)}`)); }
-  return out.join('\n').trimEnd();
+function usage(app, records) {
+  const rows = records.filter((record) => record.kind === 'usage-session').map((record) => sessionLine(record, codeSpan(record.title)));
+  return rows.length ? [`## ${app}`, '', ...rows].join('\n') : '';
 }
-function petal(records, full) {
-  const out = ['## Petal'];
-  petalGroups(records).forEach((book) => { out.push('', `### ${mdText(book.title)}${book.author ? ` — ${mdText(book.author)}` : ''}`, ''); book.records.forEach((record) => { const data = record.data || {}; if (record.kind === 'reading-session') out.push(`- Read ${Math.round(Number(data.startProgression || 0) * 100)}% → ${Math.round(Number(data.endProgression || 0) * 100)}% · ${duration(data.activeSeconds)}m active${data.chapterLabel ? ` · ${mdText(data.chapterLabel)}` : ''}`); else { out.push(`- ${mdText(record.kind.replaceAll('-', ' '))} · ${time(record.at)}`); if (full && data.quote) out.push('', quote(data.quote), ''); if (full && data.note) out.push(`  Note: ${mdText(data.note)}`); if (full && data.definition) out.push(`  Definition: ${mdText(data.definition)}`); } }); });
-  return out.join('\n').trimEnd();
+function quill(records) {
+  const rows = records.filter((record) => record.kind === 'file-activity').map((record) => `- ${formatClock(record.data?.lastAt || record.at)} · ${codeSpan(record.title)}`);
+  return rows.length ? ['## Quill', '', ...rows].join('\n') : '';
 }
-function folio(records, full) {
-  const out = ['## Folio notes'];
-  folioGroups(records).forEach((documentGroup) => {
-    out.push('', `### ${mdText(documentGroup.title)}`, '');
-    documentGroup.records.forEach((record) => {
-      const data = record.data || {};
-      const label = record.kind.replaceAll('-', ' ');
-      out.push(`- ${mdText(label)} · ${time(record.at)}${data.locationLabel ? ` · ${mdText(data.locationLabel)}` : ''}`);
-      if (full && data.quote) out.push('', quote(data.quote), '');
-      if (full && data.note) out.push(`  Note: ${mdText(data.note)}`);
-    });
-  });
-  return out.join('\n').trimEnd();
-}
-function fileSections(day) {
-  const out = ['## Files worked with'];
-  SOURCE_APPS.filter(({ id }) => FILE_APPS.includes(id) && fileAppRecords(id, day.apps?.[id] || []).length).forEach((source) => { out.push('', `### ${source.label}`, ''); fileAppRecords(source.id, day.apps[source.id]).forEach((record) => out.push(`- ${codeSpan(record.title)} · ${(record.data?.actions || []).map(actionLabel).join(', ')}`)); });
-  return out.join('\n');
-}
-export function serializeMarkdown({ day, date, note = '', detail = 'full', timezone = Intl.DateTimeFormat().resolvedOptions().timeZone }) {
-  const apps = appIdsWithRecords(day); const status = day.cached ? 'cached' : day.failures?.length ? 'partial' : 'complete'; const parsed = new Date(`${date}T12:00:00`); const title = Number.isNaN(parsed.getTime()) ? date : parsed.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-  const front = ['---', `date: ${date}`, ...(timezone ? [`timezone: ${timezone}`] : []), 'apps:', ...apps.map((app) => `  - ${app}`), `status: ${status}`, '---']; const sections = [];
-  if (day.apps?.tide?.length) sections.push(tide(day.apps.tide, detail === 'full'));
-  if (day.apps?.focus?.length) sections.push(focus(day.apps.focus, detail === 'full'));
-  if (day.apps?.loom?.length) sections.push(loom(day.apps.loom, detail === 'full'));
-  if (day.apps?.today?.length) sections.push(today(day.apps.today, detail === 'full'));
-  if (day.apps?.petal?.length) sections.push(petal(day.apps.petal, detail === 'full'));
-  if (folioNoteRecords(day.apps?.folio || []).length) sections.push(folio(day.apps.folio, detail === 'full'));
-  if (FILE_APPS.some((app) => fileAppRecords(app, day.apps?.[app] || []).length)) sections.push(fileSections(day));
-  sections.push(`## Daily note\n\n${safeText(note)}`.trimEnd());
-  return `${front.join('\n')}\n\n# ${title}\n\n${sections.join('\n\n')}\n`;
+
+export function serializeMarkdown({ day, date, note = '', detail = 'full', snapshotAt = new Date() }) {
+  const status = day.cached ? 'cached' : day.failures?.length ? 'partial' : 'complete'; const parsed = new Date(`${date}T12:00:00`); const title = Number.isNaN(parsed.getTime()) ? date : parsed.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  const snapshot = snapshotAt instanceof Date ? snapshotAt : new Date(snapshotAt); const snapshotTime = Number.isNaN(snapshot.getTime()) ? '--:--' : snapshot.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  const sections = [
+    focus(day.apps?.focus || []), today(day.apps?.today || []), folio(day.apps?.folio || [], detail === 'full'),
+    petal(day.apps?.petal || [], detail === 'full'), cove(day.apps?.cove || []), tide(day.apps?.tide || [], detail === 'full'),
+    loom(day.apps?.loom || [], detail === 'full'), quill(day.apps?.quill || []), usage('Slate', day.apps?.slate || []), usage('Grove', day.apps?.grove || []),
+    `## Daily note\n\n${safeText(note)}`.trimEnd(),
+  ].filter(Boolean);
+  return `---\ndate: ${date}\ntime: "${snapshotTime}"\nstatus: ${status}\n---\n\n# ${title}\n\n${sections.join('\n\n')}\n`;
 }

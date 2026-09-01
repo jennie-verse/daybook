@@ -1,5 +1,11 @@
 # Daybook production verification
 
+## 2026-09-01 Markdown session export
+
+- Properties `date/time/status` 전용, AM/PM range, Focus 축약, Today 완료/취소선, reading/usage session 출력을 자동 fixture로 검증했습니다.
+- 안전한 Preview에서 checkbox, 취소선, code, emphasis를 DOM API로만 렌더링하며 Source/Preview 전환 시 하나의 고정 export snapshot을 사용합니다.
+- 로컬 브라우저에서 데스크톱 및 390×844 모바일 화면, Source/Preview 전환, 콘솔 error/warning 없음과 가로 잘림 없음을 확인했습니다.
+
 검증일: 2026-08-17 (America/Chicago)
 
 ## 자동 검증

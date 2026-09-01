@@ -10,15 +10,20 @@ export function sourceSummary(app, records) {
   if (app === 'loom') { const blocks = records.filter((r) => r.kind === 'block'); return `${blocks.length} blocks · ${blocks.filter((r) => r.data?.done).length} done · ${records.length - blocks.length} changes`; }
   if (app === 'petal') return `${new Set(records.map((r) => r.data?.bookId).filter(Boolean)).size} books · ${records.length} activities`;
   if (app === 'folio') {
-    const notes = records.filter((record) => record.kind !== 'file-activity');
+    const sessions = records.filter((record) => record.kind === 'reading-session');
+    if (sessions.length) return `${sessions.length} reading session${sessions.length === 1 ? '' : 's'} · ${minutes(sessions.reduce((sum, record) => sum + Number(record.data?.activeSeconds || 0), 0))}m`;
+    const notes = records.filter((record) => !['file-activity', 'reading-session'].includes(record.kind));
     if (notes.length) return `${new Set(notes.map((record) => record.data?.documentId || record.title)).size} documents · ${notes.length} notes`;
   }
   if (app === 'today') { const tasks = records.filter((r) => r.kind === 'task'); return `${tasks.length} task${tasks.length === 1 ? '' : 's'} · ${tasks.filter((r) => r.data?.done).length} done`; }
+  if (app === 'cove' && records.some((record) => record.kind === 'reading-session')) { const sessions = records.filter((record) => record.kind === 'reading-session'); return `${sessions.length} reading session${sessions.length === 1 ? '' : 's'} · ${minutes(sessions.reduce((sum, record) => sum + Number(record.data?.activeSeconds || 0), 0))}m`; }
   if (app === 'cove') { const saved = records.filter((r) => r.kind === 'link-saved').length; const read = records.filter((r) => r.kind === 'link-activity' && (r.data?.actions || []).includes('opened')).length; const highlights = records.filter((r) => r.kind === 'highlight-created').length; return `${saved} saved · ${read} read · ${highlights} highlights`; }
+  if (['slate', 'grove'].includes(app) && records.some((record) => record.kind === 'usage-session')) { const sessions = records.filter((record) => record.kind === 'usage-session'); return `${sessions.length} session${sessions.length === 1 ? '' : 's'} · ${minutes(sessions.reduce((sum, record) => sum + Number(record.data?.activeSeconds || 0), 0))}m`; }
   return `${records.length} item${records.length === 1 ? '' : 's'}`;
 }
 export function recordMeta(record) {
   const data = record.data || {};
+  if (['reading-session', 'usage-session'].includes(record.kind)) return `${timeLabel(data.startedAt)}–${timeLabel(data.endedAt)} · ${minutes(data.activeSeconds)}m active`;
   if (record.app === 'tide') return record.kind === 'item-activity' ? [data.itemType, ...(data.actions || []).map(actionLabel), data.sourceDate && `from ${data.sourceDate}`].filter(Boolean).join(' · ') : [data.label, data.type].filter(Boolean).join(' · ');
   if (record.app === 'focus') return `${minutes(data.elapsedSeconds)}m${data.plannedSeconds ? ` / planned ${minutes(data.plannedSeconds)}m` : ''} · ${data.completed ? 'Completed' : 'Stopped'}`;
   if (record.app === 'loom') return record.kind === 'block-activity' ? [...(data.actions || []).map(actionLabel), data.sourceDate && `scheduled ${data.sourceDate}`].filter(Boolean).join(' · ') : `${clockFromMinutes(data.start)}–${clockFromMinutes(Number(data.start || 0) + Number(data.duration || 0))} · ${data.done ? 'Done' : 'Not done'}`;
@@ -43,8 +48,8 @@ export function petalGroups(records) {
   records.forEach((record) => { const key = record.data?.bookId || record.title; if (!groups.has(key)) groups.set(key, { title: record.data?.bookTitle || record.title, author: record.data?.author || '', records: [] }); groups.get(key).records.push(record); });
   return [...groups.values()];
 }
-export function folioNoteRecords(records = []) { return records.filter((record) => record.kind !== 'file-activity'); }
-export function folioFileRecords(records = []) { return records.filter((record) => record.kind === 'file-activity'); }
+export function folioNoteRecords(records = []) { return records.filter((record) => !['file-activity', 'reading-session'].includes(record.kind)); }
+export function folioFileRecords(records = []) { return records.filter((record) => ['file-activity', 'reading-session'].includes(record.kind)); }
 export function fileAppRecords(app, records = []) { return app === 'folio' ? folioFileRecords(records) : records; }
 export function folioGroups(records = []) {
   const groups = new Map();

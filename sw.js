@@ -1,4 +1,4 @@
-const VERSION = '2026.08.27-iconpalette2';
+const VERSION = '2026.09.01-markdown-session1';
 const CACHE = `daybook-${VERSION}`;
 const SHELL = [
   './', './index.html', './assets/app.css',

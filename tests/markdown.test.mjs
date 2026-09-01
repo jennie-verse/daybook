@@ -1,68 +1,67 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { serializeMarkdown } from '../src/markdown.js';
-const emptyApps = { tide: [], focus: [], loom: [], petal: [], folio: [], quill: [], slate: [], grove: [] };
-test('Markdown is deterministic, safe, and uses the required file structure', () => {
-  const day = { apps: { ...emptyApps, tide: [{ app: 'tide', id: '한글', kind: 'clip', at: '2026-08-17T08:12:00-05:00', updatedAt: '2026-08-17T08:12:00-05:00', title: 'Clip', data: { label: '# phrase | emoji 🌱', type: 'Text', text: '<script>alert(1)</script>\n백틱 ` test' } }] }, records: [], failures: [] };
-  const options = { day, date: '2026-08-17', note: '## manual\n사용자 **Markdown**', timezone: 'America/Chicago' }; const first = serializeMarkdown(options); const second = serializeMarkdown(options);
-  assert.equal(first, second); assert.match(first, /^---\ndate: 2026-08-17\ntimezone: America\/Chicago\napps:\n  - tide\nstatus: complete/m); assert.match(first, /# Monday, August 17, 2026/); assert.match(first, /> <script>alert\(1\)<\/script>/); assert.match(first, /## Daily note\n\n## manual/); assert.doesNotMatch(first, /generated_at/);
-});
-test('partial and cached status are serialized distinctly', () => {
-  assert.match(serializeMarkdown({ day: { apps: emptyApps, records: [], failures: ['slate'] }, date: '2026-08-17' }), /status: partial/);
-  assert.match(serializeMarkdown({ day: { apps: emptyApps, records: [], failures: ['slate'], cached: true }, date: '2026-08-17' }), /status: cached/);
+import { formatClock, formatDuration, formatTimeRange, serializeMarkdown } from '../src/markdown.js';
+
+const emptyApps = { tide: [], focus: [], loom: [], today: [], petal: [], folio: [], cove: [], quill: [], slate: [], grove: [] };
+const dayWith = (apps, failures = []) => ({ apps: { ...emptyApps, ...apps }, records: Object.values(apps).flat(), failures });
+const session = (app, kind, title, startedAt, endedAt, activeSeconds) => ({ app, id: `${app}-session`, kind, at: endedAt, updatedAt: endedAt, title, data: { startedAt, endedAt, activeSeconds } });
+
+test('frontmatter keeps only date, time, and status with a stable snapshot', () => {
+  const options = { day: dayWith({}), date: '2026-08-31', snapshotAt: new Date('2026-08-31T14:05:00-05:00') };
+  const output = serializeMarkdown(options);
+  assert.match(output, /^---\ndate: 2026-08-31\ntime: "2:05 PM"\nstatus: complete\n---/);
+  assert.doesNotMatch(output, /timezone:|apps:|generated_at/);
+  assert.match(output, /# Monday, August 31, 2026/);
+  assert.equal(output, serializeMarkdown(options));
 });
 
-test('Folio notes include quotes and notes in full mode and keep file activity separate', () => {
-  const folio = [
-    { app: 'folio', id: 'file-1', kind: 'file-activity', at: '2026-08-17T08:00:00-05:00', updatedAt: '2026-08-17T08:00:00-05:00', title: 'Paper.pdf', data: { actions: ['opened'] } },
-    { app: 'folio', id: 'note-1', kind: 'highlight-created', at: '2026-08-17T09:15:00-05:00', updatedAt: '2026-08-17T09:15:00-05:00', title: 'Paper.pdf', data: { documentId: 'doc-1', documentTitle: 'Paper.pdf', locationLabel: 'p. 12', quote: 'Selected text', note: 'My memo' } },
-    { app: 'folio', id: 'note-2', kind: 'note-created', at: '2026-08-17T10:00:00-05:00', updatedAt: '2026-08-17T10:00:00-05:00', title: 'Paper.pdf', data: { documentId: 'doc-1', documentTitle: 'Paper.pdf', locationLabel: 'p. 14', note: 'Standalone memo' } },
-  ];
-  const day = { apps: { ...emptyApps, folio }, records: folio, failures: [] };
-  const full = serializeMarkdown({ day, date: '2026-08-17', detail: 'full', timezone: 'America/Chicago' });
-  assert.match(full, /## Folio notes/);
-  assert.match(full, /### Paper\\\.pdf/);
-  assert.match(full, /> Selected text/);
-  assert.match(full, /Note: My memo/);
-  assert.match(full, /Note: Standalone memo/);
-  assert.match(full, /## Files worked with[\s\S]*`Paper\.pdf` · Opened/);
-  const compact = serializeMarkdown({ day, date: '2026-08-17', detail: 'compact', timezone: 'America/Chicago' });
-  assert.match(compact, /highlight created · 09:15 · p\\\. 12/);
-  assert.doesNotMatch(compact, /Selected text|My memo|Standalone memo/);
+test('AM/PM ranges and durations are concise and consistent', () => {
+  assert.equal(formatClock('2026-08-31T09:02:00-05:00'), '9:02 AM');
+  assert.equal(formatTimeRange('2026-08-31T10:02:00-05:00', '2026-08-31T10:32:00-05:00'), '10:02–10:32 AM');
+  assert.equal(formatTimeRange('2026-08-31T11:50:00-05:00', '2026-08-31T12:10:00-05:00'), '11:50 AM–12:10 PM');
+  assert.equal(formatDuration(30), '<1m');
+  assert.equal(formatDuration(1800), '30m');
+  assert.equal(formatDuration(4500), '1h 15m');
 });
 
-test('non-Folio file apps keep their native activity kinds', () => {
-  const slate = { app: 'slate', id: 'board-1', kind: 'board-activity', at: '2026-08-17T11:00:00-05:00', updatedAt: '2026-08-17T11:00:00-05:00', title: 'Ideas', data: { actions: ['edited'] } };
-  const grove = { app: 'grove', id: 'map-1', kind: 'map-activity', at: '2026-08-17T12:00:00-05:00', updatedAt: '2026-08-17T12:00:00-05:00', title: 'Map', data: { actions: ['opened'] } };
-  const day = { apps: { ...emptyApps, slate: [slate], grove: [grove] }, records: [slate, grove], failures: [] };
-  const output = serializeMarkdown({ day, date: '2026-08-17', timezone: 'America/Chicago' });
-  assert.match(output, /### Slate[\s\S]*`Ideas` · Edited/);
-  assert.match(output, /### Grove[\s\S]*`Map` · Opened/);
+test('Focus omits labels, planning, and completion noise', () => {
+  const focus = { app: 'focus', id: 'f1', kind: 'session', at: '2026-08-31T10:32:00-05:00', updatedAt: '2026-08-31T10:32:00-05:00', title: 'Focus session', data: { startedAt: '2026-08-31T10:02:00-05:00', endedAt: '2026-08-31T10:32:00-05:00', elapsedSeconds: 1800, plannedSeconds: 1800, completed: true, subject: 'SQL' } };
+  const output = serializeMarkdown({ day: dayWith({ focus: [focus] }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
+  assert.match(output, /## Focus\n\n- 10:02–10:32 AM · \(30m\) · SQL/);
+  assert.doesNotMatch(output, /Focus session|planned|Completed/);
 });
 
-test('Today tasks render checkboxes and subtasks in full mode, and hide subtask text in compact mode', () => {
+test('Today groups additions and strikes incomplete tasks', () => {
   const today = [
-    { app: 'today', id: 't1', kind: 'task', at: '2026-08-26T09:00:00-05:00', updatedAt: '2026-08-26T09:00:00-05:00', title: '원고 교정 2절', data: { done: false, subtaskCount: 2, subtaskDoneCount: 1, subtasks: [{ id: 's1', title: '1절 반영', done: true }, { id: 's2', title: '각주 정리', done: false }], contentIncluded: true } },
-    { app: 'today', id: 't1:2026-08-26', kind: 'task-activity', at: '2026-08-26T09:05:00-05:00', updatedAt: '2026-08-26T09:05:00-05:00', title: '원고 교정 2절', data: { actions: ['promoted'], lastAt: '2026-08-26T09:05:00-05:00', contentIncluded: true } },
+    { app: 'today', id: 'a', kind: 'task', at: '2026-08-31T09:00:00-05:00', updatedAt: '2026-08-31T09:00:00-05:00', title: 'Finished', data: { done: true } },
+    { app: 'today', id: 'b:2026-08-31', kind: 'task-activity', at: '2026-08-31T09:10:00-05:00', updatedAt: '2026-08-31T09:10:00-05:00', title: 'Later', data: { destination: 'someday', done: false, actions: ['deferred'] } },
+    { app: 'today', id: 'c', kind: 'task', at: '2026-08-31T09:20:00-05:00', updatedAt: '2026-08-31T09:20:00-05:00', title: 'Still open', data: { done: false } },
   ];
-  const day = { apps: { ...emptyApps, today }, records: today, failures: [] };
-  const full = serializeMarkdown({ day, date: '2026-08-26', detail: 'full', timezone: 'America/Chicago' });
-  assert.match(full, /## Today/);
-  assert.match(full, /- \[ \] \*\*원고 교정 2절\*\* · 1\/2 subtasks/);
-  assert.match(full, /- \[x\] 1절 반영/);
-  assert.match(full, /- \[ \] 각주 정리/);
-  assert.match(full, /### Changes made this day[\s\S]*Moved to Today/);
-  const compact = serializeMarkdown({ day, date: '2026-08-26', detail: 'compact', timezone: 'America/Chicago' });
-  assert.doesNotMatch(compact, /1절 반영|각주 정리/);
+  const output = serializeMarkdown({ day: dayWith({ today }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
+  assert.match(output, /### Added to Today[\s\S]*- \[x\] Finished[\s\S]*- \[ \] ~~Still open~~/);
+  assert.match(output, /### Added to Someday[\s\S]*- \[ \] ~~Later~~/);
+  assert.doesNotMatch(output, /Changes made this day|Created|Moved to/);
 });
 
-test('Tide and Loom activities are separate and Compact hides long source content', () => {
-  const focus = { app: 'focus', id: 's1', kind: 'session', at: '2026-08-17T09:00:00-05:00', updatedAt: '2026-08-17T09:25:00-05:00', title: 'Focus session', data: { startedAt: '2026-08-17T09:00:00-05:00', endedAt: '2026-08-17T09:25:00-05:00', subject: 'Private subject', task: 'Private task', elapsedSeconds: 1500, completed: true } };
-  const tide = { app: 'tide', id: 'c1:2026-08-17', kind: 'item-activity', at: '2026-08-17T10:00:00-05:00', updatedAt: '2026-08-17T10:05:00-05:00', title: 'Private clip title', data: { itemType: 'Clip', actions: ['copied', 'edited'], sourceDate: '2026-08-01', lastAt: '2026-08-17T10:05:00-05:00' } };
-  const loom = { app: 'loom', id: 'b1:2026-08-17', kind: 'block-activity', at: '2026-08-17T11:00:00-05:00', updatedAt: '2026-08-17T11:05:00-05:00', title: 'Private block title', data: { actions: ['completed'], sourceDate: '2026-08-20', note: 'Private note' } };
-  const day = { apps: { ...emptyApps, focus: [focus], tide: [tide], loom: [loom] }, records: [focus, tide, loom], failures: [] };
-  const compact = serializeMarkdown({ day, date: '2026-08-17', detail: 'compact' });
-  assert.match(compact, /### Activity[\s\S]*Copied, Edited/);
-  assert.match(compact, /### Changes made this day[\s\S]*Completed · scheduled 2026-08-20/);
-  assert.doesNotMatch(compact, /Private subject|Private task|Private clip title|Private block title|Private note/);
+test('reading and usage apps export ranges and active duration only', () => {
+  const started = '2026-08-31T13:10:00-05:00'; const ended = '2026-08-31T13:55:00-05:00';
+  const output = serializeMarkdown({ day: dayWith({ folio: [session('folio', 'reading-session', 'Paper.pdf', started, ended, 2100)], cove: [session('cove', 'reading-session', 'Article', started, ended, 1800)], slate: [session('slate', 'usage-session', 'Research board', started, ended, 1200)], grove: [session('grove', 'usage-session', 'SQL map', started, ended, 900)] }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
+  assert.match(output, /## Folio\n\n- 1:10–1:55 PM · \(35m\) · `Paper\.pdf`/);
+  assert.match(output, /## Cove\n\n- 1:10–1:55 PM · \(30m\) · Article/);
+  assert.match(output, /## Slate\n\n- 1:10–1:55 PM · \(20m\) · `Research board`/);
+  assert.match(output, /## Grove\n\n- 1:10–1:55 PM · \(15m\) · `SQL map`/);
+  assert.doesNotMatch(output, /Added|Opened|Read$/m);
+});
+
+test('Petal sessions and Tide content keep the compact shared clock style', () => {
+  const petal = { ...session('petal', 'reading-session', 'Book', '2026-08-31T08:00:00-05:00', '2026-08-31T08:25:00-05:00', 1200), data: { startedAt: '2026-08-31T08:00:00-05:00', endedAt: '2026-08-31T08:25:00-05:00', activeSeconds: 1200, bookId: 'book', bookTitle: 'Book', startProgression: .1, endProgression: .2 } };
+  const tide = { app: 'tide', id: 't1', kind: 'clip', at: '2026-08-31T15:14:00-05:00', updatedAt: '2026-08-31T15:14:00-05:00', title: 'Clip', data: { text: 'A useful idea' } };
+  const output = serializeMarkdown({ day: dayWith({ petal: [petal], tide: [tide] }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
+  assert.match(output, /## Petal[\s\S]*8:00–8:25 AM · \(20m\) · \*Book\* · 10% → 20%/);
+  assert.match(output, /## Tide\n\n- 3:14 PM\n\n> A useful idea/);
+});
+
+test('partial and cached status remain distinct', () => {
+  assert.match(serializeMarkdown({ day: dayWith({}, ['slate']), date: '2026-08-31', snapshotAt: 0 }), /status: partial/);
+  assert.match(serializeMarkdown({ day: { ...dayWith({}, ['slate']), cached: true }, date: '2026-08-31', snapshotAt: 0 }), /status: cached/);
 });
