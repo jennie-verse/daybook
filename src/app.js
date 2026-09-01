@@ -70,27 +70,41 @@ function renderMarkdown() {
   const output = node('div', 'markdown-output preview-mode'); const setMode = (mode) => { preview.classList.toggle('active', mode === 'preview'); source.classList.toggle('active', mode === 'source'); output.classList.toggle('preview-mode', mode === 'preview'); output.replaceChildren(); if (mode === 'source') output.append(node('pre', 'markdown-source', markdown())); else renderSafeMarkdownPreview(output, markdown()); }; preview.onclick = () => setMode('preview'); source.onclick = () => setMode('source'); setMode('preview'); fragment.append(output);
   const actions = node('div', 'markdown-actions'); const copy = node('button', 'primary-button', 'Copy Markdown'); const download = node('button', '', 'Share / Download .md'); copy.onclick = copyMarkdown; download.onclick = downloadMarkdown; actions.append(copy, download); fragment.append(actions); return fragment;
 }
+// Undo mdText's escaping (src/markdown.js) so the Preview never shows a
+// literal backslash in front of a character that only needed escaping to
+// keep the Markdown *source* unambiguous (C-7). Safe to run on every text
+// node: it only matches an actual backslash immediately followed by one of
+// the characters mdText escapes.
+const unescapeMd = (value) => value.replace(/\\([\\`*_[\]{}<>~])/g, '$1');
+
 function renderSafeMarkdownPreview(host, value) {
   let frontmatter = false;
   value.split('\n').forEach((line) => {
     if (line === '---') { frontmatter = !frontmatter; return; }
     if (frontmatter || !line.trim()) return;
     const heading = line.match(/^(#{1,4})\s+(.*)$/);
-    if (heading) { host.append(node(`h${heading[1].length}`, '', heading[2])); return; }
-    if (line.startsWith('> ')) { host.append(node('blockquote', '', line.slice(2))); return; }
+    if (heading) { host.append(node(`h${heading[1].length}`, '', unescapeMd(heading[2]))); return; }
+    // A blockquote line may be indented two spaces to nest inside a list
+    // item (Tide's "  > body", B-4) as well as appear at the top level.
+    const quoteLine = line.match(/^ {0,2}> (.*)$/);
+    if (quoteLine) { host.append(node('blockquote', '', unescapeMd(quoteLine[1]))); return; }
     const task = line.match(/^- \[([ x])\] (.*)$/i);
     if (task) { const row = node('p', 'preview-task'); const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.disabled = true; checkbox.checked = task[1].toLowerCase() === 'x'; row.append(checkbox); appendPreviewInline(row, task[2]); host.append(row); return; }
     if (/^- /.test(line)) { const row = node('p', 'preview-list-item', '• '); appendPreviewInline(row, line.slice(2)); host.append(row); return; }
-    host.append(node('p', '', line));
+    host.append(node('p', '', unescapeMd(line)));
   });
 }
 function appendPreviewInline(host, value) {
   const pattern = /(~~[^~]+~~|`[^`]+`|\*[^*]+\*)/g; let offset = 0;
   for (const match of value.matchAll(pattern)) {
-    if (match.index > offset) host.append(document.createTextNode(value.slice(offset, match.index)));
-    const token = match[0]; const element = token.startsWith('~~') ? node('del', '', token.slice(2, -2)) : token.startsWith('`') ? node('code', '', token.slice(1, -1)) : node('em', '', token.slice(1, -1)); host.append(element); offset = match.index + token.length;
+    if (match.index > offset) host.append(document.createTextNode(unescapeMd(value.slice(offset, match.index))));
+    const token = match[0]; const raw = token.slice(token.startsWith('~~') ? 2 : 1, token.startsWith('~~') ? -2 : -1);
+    // Code span content is never passed through mdText upstream, so it must
+    // stay exactly as written — only del/em inner text can contain escapes.
+    const element = token.startsWith('~~') ? node('del', '', unescapeMd(raw)) : token.startsWith('`') ? node('code', '', raw) : node('em', '', unescapeMd(raw));
+    host.append(element); offset = match.index + token.length;
   }
-  if (offset < value.length) host.append(document.createTextNode(value.slice(offset)));
+  if (offset < value.length) host.append(document.createTextNode(unescapeMd(value.slice(offset))));
 }
 function invalidateMarkdownSnapshot() { state.markdownSnapshotAt = null; }
 function markdown() { state.markdownSnapshotAt ||= new Date(); return serializeMarkdown({ day: state.day || emptyDay(state.date), date: state.date, note: state.note, detail: state.markdownDetail, snapshotAt: state.markdownSnapshotAt }); }

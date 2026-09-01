@@ -58,10 +58,111 @@ test('Petal sessions and Tide content keep the compact shared clock style', () =
   const tide = { app: 'tide', id: 't1', kind: 'clip', at: '2026-08-31T15:14:00-05:00', updatedAt: '2026-08-31T15:14:00-05:00', title: 'Clip', data: { text: 'A useful idea' } };
   const output = serializeMarkdown({ day: dayWith({ petal: [petal], tide: [tide] }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
   assert.match(output, /## Petal[\s\S]*8:00–8:25 AM · \(20m\) · \*Book\* · 10% → 20%/);
-  assert.match(output, /## Tide\n\n- 3:14 PM\n\n> A useful idea/);
+  assert.match(output, /## Tide\n\n- 3:14 PM\n\n {2}> A useful idea/);
 });
 
 test('partial and cached status remain distinct', () => {
   assert.match(serializeMarkdown({ day: dayWith({}, ['slate']), date: '2026-08-31', snapshotAt: 0 }), /status: partial/);
   assert.match(serializeMarkdown({ day: { ...dayWith({}, ['slate']), cached: true }, date: '2026-08-31', snapshotAt: 0 }), /status: cached/);
+});
+
+/* ── 2026-09-01 Revision 4 regression tests ──────────────────────────── */
+
+test('A-3: a task completed then reopened is not shown done, even if "completed" is still in its actions', () => {
+  const reopened = {
+    app: 'today', id: 'x:2026-08-31', kind: 'task-activity',
+    at: '2026-08-31T09:10:00-05:00', updatedAt: '2026-08-31T09:10:00-05:00', title: 'SQL',
+    data: { destination: 'today', done: false, finalStatus: 'today', actions: ['created', 'promoted', 'completed', 'reopened'] },
+  };
+  const output = serializeMarkdown({ day: dayWith({ today: [reopened] }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
+  assert.match(output, /### Added to Today\n\n- \[ \] ~~SQL~~/);
+  assert.doesNotMatch(output, /- \[x\] SQL/);
+});
+
+test('A-3: finalStatus alone (no explicit done field) is still trusted over stale actions', () => {
+  const record = {
+    app: 'today', id: 'y:2026-08-31', kind: 'task-activity',
+    at: '2026-08-31T09:10:00-05:00', updatedAt: '2026-08-31T09:10:00-05:00', title: 'Someday task',
+    data: { destination: 'someday', finalStatus: 'someday', actions: ['created', 'completed', 'deferred'] },
+  };
+  const output = serializeMarkdown({ day: dayWith({ today: [record] }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
+  assert.match(output, /### Added to Someday\n\n- \[ \] ~~Someday task~~/);
+});
+
+test('B-1: Cove distinguishes exact, approximate, and duration-less external reads', () => {
+  const exact = { app: 'cove', id: 'c1', kind: 'reading-session', at: '2026-08-31T20:36:00-04:00', updatedAt: '2026-08-31T20:36:00-04:00', title: 'In-app article', data: { startedAt: '2026-08-31T20:10:00-04:00', endedAt: '2026-08-31T20:36:00-04:00', activeSeconds: 1560, historyAccuracy: 'exact' } };
+  const approx = { app: 'cove', id: 'c2', kind: 'reading-session', at: '2026-08-31T21:32:00-04:00', updatedAt: '2026-08-31T21:32:00-04:00', title: 'Safari article', data: { startedAt: '2026-08-31T21:10:00-04:00', endedAt: '2026-08-31T21:32:00-04:00', activeSeconds: 1320, historyAccuracy: 'approximate', source: 'external' } };
+  const noDuration = { app: 'cove', id: 'c3', kind: 'reading-session', at: '2026-08-31T22:10:00-04:00', updatedAt: '2026-08-31T23:20:00-04:00', title: 'Long-gone article', data: { startedAt: '2026-08-31T22:10:00-04:00', activeSeconds: 0, historyAccuracy: 'approximate', source: 'external' } };
+  const output = serializeMarkdown({ day: dayWith({ cove: [exact, approx, noDuration] }), date: '2026-08-31', snapshotAt: '2026-08-31T23:59:00-04:00' });
+  assert.match(output, /- 8:10–8:36 PM · \(26m\) · In-app article/);
+  assert.match(output, /- 9:10–9:32 PM · \(~22m\) · Safari article/);
+  assert.match(output, /- 10:10 PM · Long-gone article/);
+  assert.doesNotMatch(output, /Long-gone article.*\(/);
+});
+
+test('B-2: Focus break sessions are excluded, legacy sessions with no mode still show', () => {
+  const focusSession = { app: 'focus', id: 'f1', kind: 'session', at: '2026-08-31T10:32:00-05:00', updatedAt: '2026-08-31T10:32:00-05:00', title: 'Focus session', data: { startedAt: '2026-08-31T10:02:00-05:00', endedAt: '2026-08-31T10:32:00-05:00', elapsedSeconds: 1800, mode: 'focus', subject: 'SQL' } };
+  const breakSession = { app: 'focus', id: 'f2', kind: 'session', at: '2026-08-31T10:37:00-05:00', updatedAt: '2026-08-31T10:37:00-05:00', title: 'Break', data: { startedAt: '2026-08-31T10:32:00-05:00', endedAt: '2026-08-31T10:37:00-05:00', elapsedSeconds: 300, mode: 'break' } };
+  const legacySession = { app: 'focus', id: 'f3', kind: 'session', at: '2026-08-31T11:00:00-05:00', updatedAt: '2026-08-31T11:00:00-05:00', title: 'Focus session', data: { startedAt: '2026-08-31T10:45:00-05:00', endedAt: '2026-08-31T11:00:00-05:00', elapsedSeconds: 900, subject: 'Reading' } };
+  const output = serializeMarkdown({ day: dayWith({ focus: [focusSession, breakSession, legacySession] }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
+  assert.match(output, /10:02–10:32 AM · \(30m\) · SQL/);
+  assert.match(output, /10:45–11:00 AM · \(15m\) · Reading/);
+  assert.doesNotMatch(output, /Break/);
+});
+
+test('B-3: Petal omits the progression suffix entirely when no progression was recorded', () => {
+  const noProgress = { app: 'petal', id: 'p1', kind: 'reading-session', at: '2026-08-31T20:20:00-05:00', updatedAt: '2026-08-31T20:20:00-05:00', title: 'No Progress Book', data: { startedAt: '2026-08-31T20:05:00-05:00', endedAt: '2026-08-31T20:20:00-05:00', activeSeconds: 900, bookId: 'b', bookTitle: 'No Progress Book' } };
+  const output = serializeMarkdown({ day: dayWith({ petal: [noProgress] }), date: '2026-08-31', snapshotAt: '2026-08-31T21:00:00-05:00' });
+  assert.match(output, /## Petal\n\n- 8:05–8:20 PM · \(15m\) · \*No Progress Book\*\n/);
+  assert.doesNotMatch(output, /0% → 0%/);
+});
+
+test('B-3: Petal has the same tight spacing as Focus/Folio (no blank line between items)', () => {
+  const a = { app: 'petal', id: 'p1', kind: 'reading-session', at: '2026-08-31T20:20:00-05:00', updatedAt: '2026-08-31T20:20:00-05:00', title: 'Book A', data: { startedAt: '2026-08-31T20:05:00-05:00', endedAt: '2026-08-31T20:20:00-05:00', activeSeconds: 900, bookId: 'a', bookTitle: 'Book A' } };
+  const b = { app: 'petal', id: 'p2', kind: 'reading-session', at: '2026-08-31T21:20:00-05:00', updatedAt: '2026-08-31T21:20:00-05:00', title: 'Book B', data: { startedAt: '2026-08-31T21:05:00-05:00', endedAt: '2026-08-31T21:20:00-05:00', activeSeconds: 900, bookId: 'b', bookTitle: 'Book B' } };
+  const output = serializeMarkdown({ day: dayWith({ petal: [a, b] }), date: '2026-08-31', snapshotAt: '2026-08-31T22:00:00-05:00' });
+  assert.match(output, /## Petal\n\n- 8:05–8:20 PM · \(15m\) · \*Book A\*\n- 9:05–9:20 PM · \(15m\) · \*Book B\*/);
+});
+
+test('B-4: Tide quotes nest two spaces under the list item and survive Compact mode', () => {
+  const clip = { app: 'tide', id: 't1', kind: 'clip', at: '2026-08-31T21:08:00-05:00', updatedAt: '2026-08-31T21:08:00-05:00', title: 'Clip', data: { text: 'line one\nline two' } };
+  const full = serializeMarkdown({ day: dayWith({ tide: [clip] }), date: '2026-08-31', detail: 'full', snapshotAt: '2026-08-31T22:00:00-05:00' });
+  const compact = serializeMarkdown({ day: dayWith({ tide: [clip] }), date: '2026-08-31', detail: 'compact', snapshotAt: '2026-08-31T22:00:00-05:00' });
+  assert.match(full, /- 9:08 PM\n\n {2}> line one\n {2}> line two\n/);
+  assert.match(compact, /- 9:08 PM\n\n {2}> line one\n {2}> line two\n/);
+});
+
+test('B-5: front matter time never contains U+202F, even though Safari 16.4+ would insert it via toLocaleTimeString', () => {
+  const output = serializeMarkdown({ day: dayWith({}), date: '2026-08-31', snapshotAt: new Date(2026, 7, 31, 21, 42) });
+  assert.doesNotMatch(output, / /);
+  assert.match(output, /time: "9:42 PM"/);
+});
+
+test('B-6: a section is sorted by displayed clock, not input array order, with a stable tie-break', () => {
+  const later = { app: 'slate', id: 'z-later', kind: 'usage-session', at: '2026-08-31T15:44:00-05:00', updatedAt: '2026-08-31T15:44:00-05:00', title: 'Board B', data: { startedAt: '2026-08-31T15:10:00-05:00', endedAt: '2026-08-31T15:44:00-05:00', activeSeconds: 2000 } };
+  const earlier = { app: 'slate', id: 'a-earlier', kind: 'usage-session', at: '2026-08-31T09:05:00-05:00', updatedAt: '2026-08-31T09:05:00-05:00', title: 'Board A', data: { startedAt: '2026-08-31T08:40:00-05:00', endedAt: '2026-08-31T09:05:00-05:00', activeSeconds: 1400 } };
+  const output = serializeMarkdown({ day: dayWith({ slate: [later, earlier] }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
+  const boardAIndex = output.indexOf('Board A');
+  const boardBIndex = output.indexOf('Board B');
+  assert.ok(boardAIndex > -1 && boardBIndex > -1 && boardAIndex < boardBIndex, 'the earlier session must render before the later one regardless of input order');
+});
+
+test('B-7: Loom keeps block-activity/subtitle/detail, and sections are ordered Focus..Grove, Loom, Quill, Daily note', () => {
+  const block = { app: 'loom', id: 'l1', kind: 'block', at: '2026-08-31T00:00:00-05:00', updatedAt: '2026-08-31T00:00:00-05:00', title: 'Design review', data: { start: 540, duration: 30, done: true, subtitle: 'Weekly sync', note: 'bring notes', detail: 'room 4B' } };
+  const change = { app: 'loom', id: 'l1-activity:2026-08-31', kind: 'block-activity', at: '2026-08-31T09:05:00-05:00', updatedAt: '2026-08-31T09:05:00-05:00', title: 'Design review', data: { lastAt: '2026-08-31T09:05:00-05:00', actions: ['moved'] } };
+  const quillFile = { app: 'quill', id: 'q1', kind: 'file-activity', at: '2026-08-31T09:00:00-05:00', updatedAt: '2026-08-31T09:00:00-05:00', title: 'notes.md', data: { lastAt: '2026-08-31T09:00:00-05:00' } };
+  const output = serializeMarkdown({ day: dayWith({ loom: [block, change], quill: [quillFile] }), date: '2026-08-31', detail: 'full', snapshotAt: '2026-08-31T18:00:00-05:00' });
+  assert.match(output, /## Loom\n\n- \[x\] 9:00–9:30 AM · Design review\n {2}- Subtitle: Weekly sync\n {2}- Note: bring notes\n {2}- Detail: room 4B/);
+  assert.match(output, /### Changes made this day\n\n- 9:05 AM · Moved/);
+  const loomIndex = output.indexOf('## Loom');
+  const quillIndex = output.indexOf('## Quill');
+  const groveOrCoveIndex = output.indexOf('## Daily note');
+  assert.ok(loomIndex < quillIndex && quillIndex < groveOrCoveIndex, 'Loom must come before Quill, and both before Daily note');
+});
+
+test('C-7: mdText does not escape hyphens, and Preview never shows a backslash', () => {
+  const record = { app: 'folio', id: 'r1', kind: 'reading-session', at: '2026-08-31T10:00:00-05:00', updatedAt: '2026-08-31T10:00:00-05:00', title: 'civics-1', data: { startedAt: '2026-08-31T09:40:00-05:00', endedAt: '2026-08-31T10:00:00-05:00', activeSeconds: 1200 } };
+  const output = serializeMarkdown({ day: dayWith({ folio: [record] }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
+  assert.match(output, /`civics-1`/);
+  assert.doesNotMatch(output, /civics\\-1/);
 });

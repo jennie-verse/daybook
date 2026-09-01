@@ -111,3 +111,53 @@ phone에서의 Settings 도달 가능성 · 16px 미만 포커스 대상 없음 
 
 - [ ] today 앱 배포 완료 후, 실제 today 기기에서 Journal 기록을 올린 뒤 daybook의 By app/Timeline/Markdown 세 화면에서 실제로 보이는지 확인
 - [ ] iPhone/iPad Home Screen에서 새 daybook Service Worker 캐시로 갱신되는지
+
+## 2026-09-01 — Revision 4 후속 수정 (Review 2026-09-01 대응)
+
+Revision 3 리뷰(`Plan/daybook_markdown-export-plan/Daybook_Markdown_Export_Review_2026-09-01.md`)에서
+지적된 P1 실제 버그 1건(Today 완료 오판정)과 P2/P3 출력·품질 문제 다수를 고쳤습니다.
+
+### 고친 문제
+
+- **[P1 버그] Today 완료 오판정.** `data.done`/`data.finalStatus`가 있으면 그 값을 신뢰하도록 `today()`를 수정. 완료 후 재오픈한 할 일이 `actions`에 남은 `completed` 때문에 다시 `[x]`로 나오던 문제 해결.
+- **[P2] Cove 근사 독서시간 추가.** `historyAccuracy: "approximate"` 세션은 `(~22m)`처럼 물결표를 붙이고, duration이 없는 external 기록은 `- 8:10 PM · 제목`으로 시각만 표시.
+- **[P2] Focus의 Break 세션 제외.** `data.mode === 'break'`인 세션은 출력하지 않음. `mode`가 없는 구형 기록은 그대로 유지.
+- **[P2] Petal 0%→0% 제거 및 간격 통일.** 진행률 두 값이 모두 유효할 때만 `· NN% → NN%`를 붙이고, 항목 간 빈 줄을 없애 Focus/Folio와 같은 간격으로 통일.
+- **[P2] Tide 인용문 들여쓰기 + Compact 유지.** `  > 내용` 형태로 목록 항목에 묶고, Compact 모드에서도 본문을 유지(Full/Compact 차이는 Folio/Petal 긴 주석에만 적용).
+- **[P2] front matter time의 특수 공백 제거.** `toLocaleTimeString` 대신 `clockParts()` 기반 `formatClockFromDate()`를 사용해 U+202F가 섞이지 않도록 수정.
+- **[P2] 섹션 내부 정렬.** 각 섹션을 표시되는 시·분 오름차순으로 정렬(`sortedRecords()`), 동률은 원본 instant·record ID로 tie-break.
+- **[P2] Loom 출력 복원 + 섹션 순서.** `block-activity`(Changes made this day)와 Subtitle/Note/Detail을 되살리고, 섹션 순서를 Focus → Today → Folio → Petal → Cove → Tide → Slate → Grove → Loom → Quill → Daily note로 정리.
+- **[P3] Markdown escape 축소.** `mdText`의 escape 대상을 실제 Markdown 구문 문자(`\ \` * _ [ ] { } < > ~`)로 좁히고, Preview 렌더러가 남은 escape도 화면에서 원래 글자로 되돌리도록 `unescapeMd()` 추가.
+- **[P3] `markdown.js` 가독성.** `today()`/`petal()`/`folio()` 등 한 줄에 여러 문장이 몰려 있던 부분을 동작 변경 없이 줄 단위로 재작성.
+
+### 의도적으로 반영하지 않은 리뷰 제안
+
+- 리뷰 항목 4(과거 날짜의 Folio/Cove/Slate/Grove 기록에 legacy `file-activity`/`board-activity`/`map-activity`/`link-activity` fallback 줄 추가)는 이번 작업 지시서 "E. 하지 말 것"에서 명시적으로 금지되어 반영하지 않았습니다. 새 세션 기록이 있는 날짜만 시간 줄이 나오며, 과거 기록 자체는 삭제하지 않고 화면·Markdown에만 보이지 않습니다.
+
+### 새로 추가한 테스트
+
+`tests/markdown.test.mjs`에 18건 추가: Today 완료 판정 2건(재오픈, finalStatus만 있는 경우), Cove exact/approximate/무기간 3종 1건, Focus break 제외 1건, Petal 0%→0% 생략 및 간격 2건, Tide 들여쓰기+Compact 유지 1건, front matter U+202F 부재 1건, 섹션 정렬 1건, Loom 복원+섹션 순서 1건, mdText escape 축소 1건. `tests/static.test.mjs`의 캐시 버전 정규식도 함께 갱신.
+
+### 통과 — 자동
+
+`npm test` **39/39 통과**(기존 21건 + 신규 18건), `npm run test:syntax` 통과.
+
+### 통과 — 실제 브라우저 (2026-09-01, 이 세션에서 정적 서버 + Browser 도구)
+
+`Published/`를 정적 서버로 띄우고 `/daybook/`을 열어 확인:
+
+- [x] Markdown 탭 Preview/Source 전환 정상, front matter가 `date`/`time`/`status` 세 줄만 표시(`timezone`/`apps` 없음)
+- [x] `time` 값에 일반 공백만 사용됨을 화면에서 확인
+- [x] 데이터가 없는 날짜에서 오류 없이 "No records this day" 표시
+- [ ] Pending — Service Worker 등록 시 이 세션의 로컬 프록시 환경에서 "An unknown error occurred when fetching the script" 콘솔 오류 1건 관찰됨. `navigator.serviceWorker.register()` 경로로, 코드 변경과 무관하게 이 브라우저 자동화 도구의 프록시 제약으로 보입니다. 실제 GitHub Pages(HTTPS) 환경에서 재확인 필요.
+
+### 버전
+
+- `sw.js` `VERSION`: `2026.09.01-markdown-session1` → `2026.09.01-export-fixes1`
+
+### Pending — 실기기에서 확인 필요
+
+- [ ] iPhone/iPad 세로·가로에서 Preview/Source 전환 시 겹침·잘림 없는지, 글자 크기 6단계 각각에서 레이아웃 유지되는지
+- [ ] 실제 GitHub Pages(HTTPS)에서 Service Worker가 정상 등록되고 업데이트가 강제 새로고침 없이 적용되는지
+- [ ] Cove의 근사 독서시간(`~`)이 실제 `Open in Safari` 사용 후 정상적으로 Daybook에 나타나는지
+- [ ] Loom 실기기 기록으로 block-activity/Subtitle/Note/Detail이 정상 표시되는지

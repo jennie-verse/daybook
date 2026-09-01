@@ -37,3 +37,19 @@
 5. 각 앱에서 대표 활동을 한 번 수행하고 Daybook에서 **Refresh** 후 source의 마지막 성공 write와 해당 날짜 기록을 확인합니다.
 
 기간별 **Remove content**는 현재 projection에 더 최신의 비본문 record를 쓰는 기능입니다. 앱 원본과 일반 Sync는 그대로이며 private Git 저장소의 과거 commit history를 완전히 지우지는 않습니다.
+
+## 2026-09-01 Revision 4 후속 수정 요약
+
+이전 배포(2026-09-01 Revision 3) 이후 실사용 검토에서 나온 버그·출력 문제를 고쳤습니다.
+
+- **Today 완료 판정**: `done`/`finalStatus`가 있으면 그 값을 신뢰합니다. 완료했다가 다시 연 할 일이 `actions`에 `completed`가 남아 있다는 이유만으로 다시 완료(`[x]`)로 표시되지 않습니다.
+- **Cove**: In-app Reader로 읽은 시간(`(30m)`)과 `Open in Safari`로 읽은 근사 시간(`(~22m)`, 물결표)을 구분합니다. 60분이 넘어 돌아온 경우는 duration 없이 시각만 표시합니다.
+- **Focus**: Break 세션은 표시하지 않습니다(`mode` 없는 구형 기록은 그대로 표시).
+- **Petal**: 진행률을 기록하지 않은 세션은 `0% → 0%`를 붙이지 않고 생략합니다. 항목 간격을 Focus·Folio와 동일하게 맞췄습니다.
+- **Tide**: 인용문을 목록 항목 아래 2칸 들여쓰기로 묶었습니다(`  > 내용`). Compact 모드에서도 본문을 유지합니다(Compact는 Folio/Petal의 긴 주석에만 적용).
+- **Front matter time**: iOS Safari 16.4+에서 보이지 않는 특수 공백(U+202F)이 섞이던 문제를 고쳐 문서 전체가 일반 공백만 씁니다.
+- **섹션 내부 정렬**: 각 섹션이 표시되는 시·분 오름차순으로 정렬됩니다.
+- **Loom**: 이전에 빠졌던 block-activity(Changes made this day)와 Subtitle/Note/Detail을 되살렸습니다. 섹션 순서를 Focus → Today → Folio → Petal → Cove → Tide → Slate → Grove → Loom → Quill → Daily note로 정리했습니다.
+- **Markdown escape**: `civics-1` 같은 제목에서 불필요한 백슬래시(`civics\-1`)가 보이던 문제를 고쳤습니다. Preview는 남은 escape 문자도 원래 글자로 표시합니다.
+
+이번 범위에서 하지 않은 것: 과거(2026-09-01 이전) 활동에 대한 legacy fallback 줄 추가, `firstAt`–`lastAt` 기반 소급 시간 추정, 생산성 점수/순위 기능. Folio·Slate·Grove·Cove의 새 세션 기록은 각 앱의 이번 배포 이후 활동부터 제공됩니다.
