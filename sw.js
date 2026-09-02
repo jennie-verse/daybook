@@ -1,4 +1,4 @@
-const VERSION = '2026.09.02-covenotes1';
+const VERSION = '2026.09.02-swcachefix1';
 const CACHE = `daybook-${VERSION}`;
 const SHELL = [
   './', './index.html', './assets/app.css',
@@ -8,10 +8,20 @@ const SHELL = [
   './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',
 ];
 const SHARED = ['../shared/v1/sync.js', '../shared/v2/journal.js'];
+// cache: 'reload' bypasses the browser's own HTTP cache — without it, a
+// recently-visited asset can still be HTTP-cache-fresh and get copied
+// straight into the new versioned CACHE unchanged, silently defeating a
+// VERSION bump.
 self.addEventListener('install', (event) => event.waitUntil((async () => {
   const cache = await caches.open(CACHE);
-  await cache.addAll(SHELL);
-  await Promise.all(SHARED.map((url) => cache.add(url).catch(() => null)));
+  await Promise.all(SHELL.map(async (url) => {
+    const response = await fetch(new Request(url, { cache: 'reload' }));
+    if (!response.ok) throw new Error(`Could not cache ${url}: ${response.status}`);
+    await cache.put(url, response);
+  }));
+  await Promise.all(SHARED.map((url) => fetch(new Request(url, { cache: 'reload' }))
+    .then((response) => (response.ok ? cache.put(url, response) : null))
+    .catch(() => null)));
   await self.skipWaiting();
 })()));
 self.addEventListener('activate', (event) => event.waitUntil((async () => {
