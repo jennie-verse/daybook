@@ -1,10 +1,10 @@
-const VERSION = '2026.09.02-settingsaudit1';
+const VERSION = '2026.09.02-about1';
 const CACHE = `daybook-${VERSION}`;
 const SHELL = [
   './', './index.html', './assets/app.css',
   './assets/fonts/lexend-400.woff2', './assets/fonts/lexend-700.woff2',
   './src/app.js', './src/sources.js', './src/merge.js', './src/day-model.js',
-  './src/markdown.js', './src/store.js', './src/deployment.js', './src/sync.js',
+  './src/markdown.js', './src/store.js', './src/deployment.js', './src/sync.js', './src/version.js',
   './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',
 ];
 const SHARED = ['../shared/v1/sync.js', '../shared/v2/journal.js'];

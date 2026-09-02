@@ -3,6 +3,7 @@ import { fileAppRecords, folioGroups, petalGroups, recordBody, recordMeta, sourc
 import { serializeMarkdown } from './markdown.js';
 import { backupData, clearStore, deleteItem, getCacheBytes, listItems, readLocalNote, restoreData, saveLocalNote } from './store.js';
 import { flushNote, readSourceStatuses, reconcileNote, refreshDay } from './sync.js';
+import { APP_BUILD } from './version.js';
 
 const $ = (id) => document.getElementById(id);
 const pad = (value) => String(value).padStart(2, '0');
@@ -180,7 +181,7 @@ async function openConflicts() {
   $('conflict-dialog').showModal();
 }
 async function openSettings() {
-  $('token-input').value = ''; $('token-status').textContent = state.token ? `Saved token ending in ••••${state.token.slice(-4)}` : 'No token saved'; $('context-input').value = read('daybook.contextLabel'); $('text-size').value = state.textSize; $('markdown-detail').value = state.markdownDetail; $('cache-size').textContent = `Activity cache: ${Math.max(1, Math.round((await getCacheBytes()) / 1024))} KB`; await renderStatuses(); $('settings-dialog').showModal();
+  $('token-input').value = ''; $('token-status').textContent = state.token ? `Saved token ending in ••••${state.token.slice(-4)}` : 'No token saved'; $('context-input').value = read('daybook.contextLabel'); $('text-size').value = state.textSize; $('markdown-detail').value = state.markdownDetail; $('cache-size').textContent = `Activity cache: ${Math.max(1, Math.round((await getCacheBytes()) / 1024))} KB`; $('app-version').textContent = `App version ${APP_BUILD}`; await renderStatuses(); $('settings-dialog').showModal();
 }
 async function saveSettings() {
   const entered = $('token-input').value.trim(); if (entered) { state.token = entered; write('sync.token.v1', entered); } const label = $('context-input').value.trim() || 'daybook'; if (!state.context) state.context = makeContext(label); write('daybook.context', state.context); write('daybook.contextLabel', label); state.textSize = $('text-size').value; state.markdownDetail = $('markdown-detail').value; invalidateMarkdownSnapshot(); write('daybook.textSize', state.textSize); write('daybook.markdownDetail', state.markdownDetail); await loadDay();
