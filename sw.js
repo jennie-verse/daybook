@@ -1,4 +1,4 @@
-const VERSION = '2026.09.02-swcachefix1';
+const VERSION = '2026.09.02-settingsaudit1';
 const CACHE = `daybook-${VERSION}`;
 const SHELL = [
   './', './index.html', './assets/app.css',

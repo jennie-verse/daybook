@@ -87,6 +87,12 @@
     <form method="dialog">
       <div class="dialog-heading"><div><p class="eyebrow">DAYBOOK</p><h2>Settings</h2></div><button class="icon-button" value="cancel" aria-label="Close">×</button></div>
       <section>
+        <h3>Reading & export</h3>
+        <div class="field-row"><label class="field">Text size<select id="text-size"><option value="6">6 px</option><option value="8">8 px</option><option value="10">10 px</option><option value="12">12 px</option><option value="14">14 px</option><option value="17">17 px</option></select></label><button type="button" class="text-button" id="text-size-reset">Reset</button></div>
+        <label class="field">Markdown detail<select id="markdown-detail"><option value="full">Full source text</option><option value="compact">Compact summaries</option></select></label>
+        <p class="settings-note">Compact changes only what Daybook displays and exports. It does not remove content already uploaded. Choose Upload content separately in each source app.</p>
+      </section>
+      <section>
         <h3>Private repository</h3>
         <p class="help">Daybook reads only <code>journal/</code> projections from the private <code>webapp-data</code> repository owned by the GitHub Pages account.</p>
         <label class="field">GitHub token<input id="token-input" type="password" autocomplete="off" placeholder="Paste to connect or replace"></label>
@@ -96,12 +102,6 @@
       <section>
         <div class="section-heading"><h3>Source status</h3><button type="button" class="text-button" id="settings-refresh">Refresh</button></div>
         <div id="source-status-list" class="source-status-list"></div>
-      </section>
-      <section>
-        <h3>Reading & export</h3>
-        <div class="field-row"><label class="field">Text size<select id="text-size"><option value="6">6 px</option><option value="8">8 px</option><option value="10">10 px</option><option value="12">12 px</option><option value="14">14 px</option><option value="17">17 px</option></select></label><button type="button" class="text-button" id="text-size-reset">Reset</button></div>
-        <label class="field">Markdown detail<select id="markdown-detail"><option value="full">Full source text</option><option value="compact">Compact summaries</option></select></label>
-        <p class="settings-note">Compact changes only what Daybook displays and exports. It does not remove content already uploaded. Choose Upload content separately in each source app.</p>
       </section>
       <section>
         <h3>Local data</h3>
