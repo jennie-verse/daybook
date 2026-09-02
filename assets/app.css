@@ -1,6 +1,6 @@
 @font-face{font-family:Lexend;src:url("./fonts/lexend-400.woff2") format("woff2");font-weight:400;font-display:swap}
 @font-face{font-family:Lexend;src:url("./fonts/lexend-700.woff2") format("woff2");font-weight:600 800;font-display:swap}
-:root{--paper:#fdf7f8;--surface:#fff;--rose-soft:#efb3c1;--rose-deep:#8a4257;--tint:#fbe4ea;--ink:#4a3a40;--muted:#8a7780;--subtle:#b0a0a7;--line:#ede3e6;--success:#8ecfb4;--warning:#f0c193;--error:#de8580;--base-size:12px;font-family:Lexend,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);background:var(--paper);font-size:var(--base-size);font-synthesis:none}
+:root{--paper:#fdf7f8;--surface:#fff;--rose-soft:#efb3c1;--rose-deep:#8a4257;--tint:#fbe4ea;--ink:#4a3a40;--muted:#8a7780;--subtle:#b0a0a7;--line:#ede3e6;--success:#8ecfb4;--warning:#f0c193;--error:#de8580;--base-size:12px;font-family:Lexend,Verdana,"Trebuchet MS","Segoe UI",Arial,sans-serif;color:var(--ink);background:var(--paper);font-size:var(--base-size);font-synthesis:none}
 *{box-sizing:border-box}
 body{margin:0;min-width:320px;background:linear-gradient(180deg,#fff 0,var(--paper) 180px);-webkit-font-smoothing:antialiased}
 button,input,select,textarea{font:inherit;color:inherit}button,a{touch-action:manipulation}

@@ -1,4 +1,4 @@
-const VERSION = '2026.09.01-export-fixes1';
+const VERSION = '2026.09.01-housestyle1';
 const CACHE = `daybook-${VERSION}`;
 const SHELL = [
   './', './index.html', './assets/app.css',
