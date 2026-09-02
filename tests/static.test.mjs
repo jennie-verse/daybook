@@ -90,7 +90,7 @@ test('the bundled font ships its licence', () => {
 test('the cache version moved with the shipped files', () => {
   // cache-first: leaving the version alone leaves installed devices on the old
   // files for ever.
-  assert.match(read('sw.js'), /const VERSION = '2026\.09\.01-housestyle1';/);
+  assert.match(read('sw.js'), /const VERSION = '2026\.09\.02-a11y1';/);
 });
 
 test('account-portable settings report custom-domain sync configuration failures', () => {

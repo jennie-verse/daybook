@@ -1,7 +1,7 @@
 import { SOURCE_APPS, SOURCE_BY_ID } from './sources.js';
 import { fileAppRecords, folioGroups, petalGroups, recordBody, recordMeta, sourceSummary, timeLabel, visibleSections } from './day-model.js';
 import { serializeMarkdown } from './markdown.js';
-import { backupData, clearStore, getCacheBytes, listItems, readLocalNote, restoreData, saveLocalNote } from './store.js';
+import { backupData, clearStore, deleteItem, getCacheBytes, listItems, readLocalNote, restoreData, saveLocalNote } from './store.js';
 import { flushNote, readSourceStatuses, reconcileNote, refreshDay } from './sync.js';
 
 const $ = (id) => document.getElementById(id);
@@ -159,6 +159,26 @@ async function renderStatuses() {
   state.statuses = await readSourceStatuses(state.token); const host = $('source-status-list'); host.replaceChildren();
   SOURCE_APPS.forEach((source) => { const status = state.statuses[source.id] || {}; const item = node('div', 'source-status'); item.append(node('span', 'status-dot ' + (status.state || 'not-reported')), node('strong', '', source.label)); const configurationError = status.configurationError; const parts = [configurationError ? 'configuration required' : (status.state || 'not-reported').replace('-', ' ')]; if (status.contextCount) parts.push(`${status.contextCount} context${status.contextCount === 1 ? '' : 's'}`); if (status.mixedContent) parts.push('mixed content settings'); if (status.pendingCount) parts.push(`${status.pendingCount} pending`); const details = node('span', '', parts.join(' · ')); if (configurationError) details.title = configurationError; else if (status.reportedAt) details.title = `Last reported ${new Date(status.reportedAt).toLocaleString()}${status.lastSuccessfulWriteAt ? ` · Last write ${new Date(status.lastSuccessfulWriteAt).toLocaleString()}` : ''}`; const link = node('a', 'text-button', ['quill', 'slate', 'grove'].includes(source.id) && status.state === 'not-reported' ? 'History starts with this version' : 'Open Journal settings'); link.href = source.href; item.append(details, link); host.append(item); });
 }
+async function openConflicts() {
+  const conflicts = (await listItems('noteConflicts')).sort((a, b) => (b.key || '').localeCompare(a.key || ''));
+  const host = $('conflict-list'); host.replaceChildren();
+  if (!conflicts.length) { host.append(node('p', 'help', 'No preserved conflicts.')); }
+  conflicts.forEach((item) => {
+    const row = node('div', 'conflict-item');
+    row.append(node('strong', '', `${item.date} · preserved ${new Date(item.updatedAt || Date.now()).toLocaleString()}`));
+    const pre = node('pre', '', item.markdown || '');
+    row.append(pre);
+    const actions = node('div', 'button-row');
+    const copyBtn = node('button', '', 'Copy'); copyBtn.type = 'button';
+    copyBtn.onclick = async () => { try { await navigator.clipboard.writeText(item.markdown || ''); toast('Copied'); } catch { toast('Copy is unavailable in this browser'); } };
+    const discardBtn = node('button', 'danger', 'Discard'); discardBtn.type = 'button';
+    discardBtn.onclick = async () => { await deleteItem('noteConflicts', item.key); await openConflicts(); };
+    actions.append(copyBtn, discardBtn);
+    row.append(actions);
+    host.append(row);
+  });
+  $('conflict-dialog').showModal();
+}
 async function openSettings() {
   $('token-input').value = ''; $('token-status').textContent = state.token ? `Saved token ending in ••••${state.token.slice(-4)}` : 'No token saved'; $('context-input').value = read('daybook.contextLabel'); $('text-size').value = state.textSize; $('markdown-detail').value = state.markdownDetail; $('cache-size').textContent = `Activity cache: ${Math.max(1, Math.round((await getCacheBytes()) / 1024))} KB`; await renderStatuses(); $('settings-dialog').showModal();
 }
@@ -166,13 +186,14 @@ async function saveSettings() {
   const entered = $('token-input').value.trim(); if (entered) { state.token = entered; write('sync.token.v1', entered); } const label = $('context-input').value.trim() || 'daybook'; if (!state.context) state.context = makeContext(label); write('daybook.context', state.context); write('daybook.contextLabel', label); state.textSize = $('text-size').value; state.markdownDetail = $('markdown-detail').value; invalidateMarkdownSnapshot(); write('daybook.textSize', state.textSize); write('daybook.markdownDetail', state.markdownDetail); await loadDay();
 }
 function bind() {
-  $('previous-day').onclick = () => shiftDay(-1); $('next-day').onclick = () => shiftDay(1); $('today-button').onclick = $('rail-today').onclick = () => changeDate(today()); $('date-button').onclick = () => $('date-dialog').showModal(); $('choose-date').onclick = () => changeDate($('date-input').value); $('refresh-button').onclick = () => loadDay(); $('open-settings').onclick = openSettings; $('open-settings-compact').onclick = openSettings; $('settings-refresh').onclick = async () => { await renderStatuses(); toast('Source status refreshed'); }; $('save-settings').onclick = saveSettings;
+  $('previous-day').onclick = () => shiftDay(-1); $('next-day').onclick = () => shiftDay(1); $('today-button').onclick = $('rail-today').onclick = () => changeDate(today()); $('date-button').onclick = () => $('date-dialog').showModal(); $('choose-date').onclick = () => changeDate($('date-input').value); $('refresh-button').onclick = () => loadDay(); $('open-settings').onclick = openSettings; $('open-settings-compact').onclick = openSettings; $('settings-refresh').onclick = async () => { await renderStatuses(); toast('Source status refreshed'); }; $('save-settings').onclick = saveSettings; $('view-conflicts').onclick = openConflicts;
   document.querySelectorAll('[data-view]').forEach((button) => button.onclick = () => setView(button.dataset.view)); $('copy-markdown').onclick = copyMarkdown; $('download-markdown').onclick = downloadMarkdown;
   $('note-text').addEventListener('compositionstart', () => { composing = true; }); $('note-text').addEventListener('compositionend', () => { composing = false; persistNote(); }); $('note-text').addEventListener('input', () => { if (!composing) persistNote(); });
   $('remove-token').onclick = () => { state.token = ''; remove('sync.token.v1'); $('token-status').textContent = 'No token saved'; $('token-input').value = ''; toast('Token removed from this device'); };
-  $('clear-cache').onclick = async () => { await clearStore('days'); $('cache-size').textContent = 'Activity cache: cleared'; toast('Activity cache cleared'); };
+  $('text-size-reset').onclick = () => { $('text-size').value = '12'; };
+  $('clear-cache').onclick = async () => { if (!confirm('Clear the activity cache on this device? Nothing on other devices or in Journal is affected.')) return; await clearStore('days'); $('cache-size').textContent = 'Activity cache: cleared'; toast('Activity cache cleared'); };
   $('download-backup').onclick = async () => downloadText(JSON.stringify(await backupData(state), null, 2), `daybook-backup-${today()}.json`, 'application/json');
-  $('restore-backup').onchange = async (event) => { try { const settings = await restoreData(JSON.parse(await event.target.files[0].text())); if (settings.textSize) state.textSize = settings.textSize; if (settings.markdownDetail) state.markdownDetail = settings.markdownDetail; toast('Backup restored'); await loadDay({ remote: false }); } catch { toast('This is not a valid Daybook backup'); } };
+  $('restore-backup').onchange = async (event) => { try { const payload = JSON.parse(await event.target.files[0].text()); if (!confirm('Restore this backup? Notes on this device that share a date with the backup will be overwritten.')) return; const settings = await restoreData(payload); if (settings.textSize) state.textSize = settings.textSize; if (settings.markdownDetail) state.markdownDetail = settings.markdownDetail; toast('Backup restored'); await loadDay({ remote: false }); } catch { toast('This is not a valid Daybook backup'); } };
   window.addEventListener('online', async () => { setBanner(); await flushOutbox(); await loadDay(); }); window.addEventListener('offline', () => { setBanner(); render(); });
   const refreshOnResume = () => { if (document.visibilityState === 'hidden' || Date.now() - lastRemoteRefreshAt <= 60_000) return; clearTimeout(resumeTimer); resumeTimer = setTimeout(() => loadDay(), 250); };
   window.addEventListener('pageshow', refreshOnResume); document.addEventListener('visibilitychange', refreshOnResume);

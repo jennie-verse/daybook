@@ -160,4 +160,37 @@ Revision 3 리뷰(`Plan/daybook_markdown-export-plan/Daybook_Markdown_Export_Rev
 - [ ] iPhone/iPad 세로·가로에서 Preview/Source 전환 시 겹침·잘림 없는지, 글자 크기 6단계 각각에서 레이아웃 유지되는지
 - [ ] 실제 GitHub Pages(HTTPS)에서 Service Worker가 정상 등록되고 업데이트가 강제 새로고침 없이 적용되는지
 - [ ] Cove의 근사 독서시간(`~`)이 실제 `Open in Safari` 사용 후 정상적으로 Daybook에 나타나는지
+
+## 2026-09-02 — 전체 웹앱 하우스 스타일 점검 대응 (글자 크기 6단계, 삭제 확인, 보존된 충돌 UI)
+
+전체 웹앱 일관성 점검에서 나온 daybook 항목들을 고쳤습니다. 새 기능 추가가 아니라 하우스 스타일 위반과
+"만들어졌지만 연결되지 않은 UI"를 고친 작업입니다.
+
+### 고친 문제
+
+- **[하우스 스타일 위반] Text size가 6단계가 아니었음.** `<select id="text-size">`가 10/11/12/13/14/16px 6개 값을 썼는데, `WebApp_House_Style.md` 3장이 정하는 값은 6/8/10/12/14/17px입니다. 값을 교체하고, 옆에 `Reset` 버튼을 추가해 12px로 즉시 되돌릴 수 있게 했습니다. 버튼(`min-height:44px`, 고정 px)은 `--base-size`에 묶여 있지 않아 극단값(6px·17px)에서도 터치 영역이 줄지 않음을 확인했습니다.
+- **[하우스 스타일 위반] 삭제·되돌리기에 확인이 없었음.** `Clear activity cache`와 `Restore backup`이 확인 없이 즉시 실행되던 문제. `confirm()`으로 확인 단계를 추가했습니다(다른 기기 목적으로 사용 중인 dialog 인프라가 daybook에는 아직 없어, 최소 변경으로 native confirm을 선택). Restore는 파일을 JSON으로 파싱한 뒤(형식이 틀리면 기존과 동일하게 실패 toast), 실제 병합(`restoreData`) 직전에 확인합니다.
+- **[죽은 UI] `#conflict-dialog`가 한 번도 열리지 않음.** `src/sync.js`의 세 지점이 `preserveConflict()`로 밀린 메모 버전을 `noteConflicts`에 저장하고 있었지만, 그 값을 보여줄 방법이 없어 사용자가 영영 확인할 수 없는 상태였습니다. Settings → Local data에 `Preserved conflicts` 버튼을 추가해 날짜 역순으로 목록을 보여주고, 각 항목에서 `Copy`(클립보드) 또는 `Discard`(그 항목만 삭제)를 할 수 있게 했습니다. `store.js`는 이미 있던 `listItems`/`deleteItem` 범용 함수를 그대로 재사용했고 스키마 변경은 없습니다.
+
+### 통과 — 자동
+
+`npm test` **39/39 통과**(회귀 없음), `npm run test:syntax` 통과. `tests/static.test.mjs`의 캐시 버전 리터럴도 함께 갱신.
+
+### 통과 — 실제 브라우저 (로컬 정적 서버)
+
+- Settings에서 `text-size` 옵션이 정확히 `6/8/10/12/14/17`임을 확인.
+- `Reset` 클릭 → `12`로 즉시 복귀 확인.
+- `Save & refresh`로 6px·17px 각각 적용 → `--base-size`가 정확히 반영되고, 카드·버튼 레이아웃이 깨지지 않으며 버튼 높이가 두 극단 모두 `44px`로 고정됨을 확인(스크린샷).
+- `Clear activity cache` 클릭 → `confirm()`이 정확한 문구로 뜨고, 취소하면(테스트에서 `false` 반환) 실제로 캐시가 지워지지 않음을 확인.
+- IndexedDB에 가짜 `noteConflicts` 레코드를 넣고 `Preserved conflicts` 클릭 → 날짜·보존 시각·본문·Copy·Discard가 정상 표시. `Discard` 클릭 → 해당 레코드가 지워지고 "No preserved conflicts." 빈 상태로 정상 전환.
+- 전 과정 콘솔 오류 **0건**.
+
+### 버전
+
+- `sw.js` `VERSION`: `2026.09.01-housestyle1` → `2026.09.02-a11y1`
+
+### Pending — 실기기에서 확인 필요
+
+- [ ] iPhone/iPad에서 6px·17px 극단값의 실제 가독성과 레이아웃
+- [ ] 실제 sync 충돌 상황을 만들어(두 기기에서 같은 날짜를 동시에 편집) `Preserved conflicts`에 정상적으로 쌓이는지
 - [ ] Loom 실기기 기록으로 block-activity/Subtitle/Note/Detail이 정상 표시되는지
