@@ -1,4 +1,4 @@
-import { actionLabel, folioGroups, folioNoteRecords, petalGroups, safeText } from './day-model.js';
+import { actionLabel, coveGroups, coveNoteRecords, folioGroups, folioNoteRecords, petalGroups, safeText } from './day-model.js';
 
 /* ── inline Markdown helpers ─────────────────────────────────────────────
    mdText only escapes characters that can actually change Markdown structure
@@ -172,7 +172,7 @@ function today(records) {
 function folio(records, full) {
   const sessions = sortedRecords(records.filter((record) => record.kind === 'reading-session'));
   const notes = folioNoteRecords(records);
-  if (!sessions.length && !notes.length) return '';
+  if (!sessions.length && !(full && notes.length)) return '';
   const out = ['## Folio'];
   if (sessions.length) {
     out.push('');
@@ -236,9 +236,27 @@ function coveLine(record) {
   const durationPart = durationValue ? ` · (${approximate ? '~' : ''}${durationValue})` : '';
   return `- ${time}${durationPart} · ${mdText(record.title)}`;
 }
-function cove(records) {
-  const rows = sortedRecords(records.filter((record) => record.kind === 'reading-session')).map(coveLine);
-  return rows.length ? ['## Cove', '', ...rows].join('\n') : '';
+function cove(records, full) {
+  const sessions = sortedRecords(records.filter((record) => record.kind === 'reading-session'));
+  const notes = coveNoteRecords(records);
+  if (!sessions.length && !(full && notes.length)) return '';
+  const out = ['## Cove'];
+  if (sessions.length) {
+    out.push('', ...sessions.map(coveLine));
+  }
+  if (full && notes.length) {
+    out.push('', '### Notes');
+    coveGroups(notes).forEach((group) => {
+      out.push('', `#### ${mdText(group.title)}`, '');
+      sortedRecords(group.records).forEach((record) => {
+        const data = record.data || {};
+        out.push(`- ${formatClock(record.at)}`);
+        if (data.quote) { out.push(''); out.push(quote(data.quote)); out.push(''); }
+        if (data.note) out.push(`  Note: ${mdText(data.note)}`);
+      });
+    });
+  }
+  return out.join('\n').trimEnd();
 }
 
 // Tide: creation time and body only, always (Compact only shortens Folio's
@@ -309,7 +327,7 @@ export function serializeMarkdown({ day, date, note = '', detail = 'full', snaps
     today(day.apps?.today || []),
     folio(day.apps?.folio || [], full),
     petal(day.apps?.petal || [], full),
-    cove(day.apps?.cove || []),
+    cove(day.apps?.cove || [], full),
     tide(day.apps?.tide || []),
     usage('Slate', day.apps?.slate || []),
     usage('Grove', day.apps?.grove || []),

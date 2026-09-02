@@ -166,3 +166,29 @@ test('C-7: mdText does not escape hyphens, and Preview never shows a backslash',
   assert.match(output, /`civics-1`/);
   assert.doesNotMatch(output, /civics\\-1/);
 });
+
+test('Cove: a highlight with no note reaches Daybook as a highlight-only entry', () => {
+  const record = { app: 'cove', id: 'h1', kind: 'highlight-created', at: '2026-08-31T09:15:00-05:00', updatedAt: '2026-08-31T09:15:00-05:00', title: 'Article One', data: { itemId: 'item-1', color: 'pink', quote: 'A quoted line.' } };
+  const output = serializeMarkdown({ day: dayWith({ cove: [record] }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
+  assert.match(output, /## Cove\n\n### Notes\n\n#### Article One\n\n- 9:15 AM\n\n> A quoted line\./);
+  assert.doesNotMatch(output, /Note:/);
+});
+
+test('Cove: a highlight with an attached note clearly separates quote from note', () => {
+  const record = { app: 'cove', id: 'h2', kind: 'highlight-created', at: '2026-08-31T09:20:00-05:00', updatedAt: '2026-08-31T09:20:00-05:00', title: 'Article Two', data: { itemId: 'item-2', color: 'yellow', quote: 'The highlighted quote.', note: 'My own thought about it.' } };
+  const output = serializeMarkdown({ day: dayWith({ cove: [record] }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
+  assert.match(output, /#### Article Two\n\n- 9:20 AM\n\n> The highlighted quote\.\n\n {2}Note: My own thought about it\./);
+});
+
+test('Cove: a whole-document note (no highlight) reaches Daybook separately, with no quote', () => {
+  const record = { app: 'cove', id: 'n1', kind: 'note-created', at: '2026-08-31T09:25:00-05:00', updatedAt: '2026-08-31T09:25:00-05:00', title: 'Article Three', data: { itemId: 'item-3', note: 'A general reading note.' } };
+  const output = serializeMarkdown({ day: dayWith({ cove: [record] }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
+  assert.match(output, /#### Article Three\n\n- 9:25 AM\n {2}Note: A general reading note\./);
+  assert.doesNotMatch(output, /> A general reading note/);
+});
+
+test('Cove: Notes are omitted from Compact detail, same as Folio', () => {
+  const record = { app: 'cove', id: 'h3', kind: 'highlight-created', at: '2026-08-31T09:30:00-05:00', updatedAt: '2026-08-31T09:30:00-05:00', title: 'Article Four', data: { itemId: 'item-4', quote: 'Quiet quote.' } };
+  const output = serializeMarkdown({ day: dayWith({ cove: [record] }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00', detail: 'compact' });
+  assert.doesNotMatch(output, /## Cove/);
+});

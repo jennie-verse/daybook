@@ -60,6 +60,20 @@ export function folioGroups(records = []) {
   });
   return [...groups.values()];
 }
+// Cove's equivalent of folioNoteRecords/folioGroups — highlight-created/
+// -updated and note-created/-updated records, grouped by the saved article
+// (itemId), each group carrying that article's title.
+const COVE_NOTE_KINDS = ['highlight-created', 'highlight-updated', 'note-created', 'note-updated'];
+export function coveNoteRecords(records = []) { return records.filter((record) => COVE_NOTE_KINDS.includes(record.kind)); }
+export function coveGroups(records = []) {
+  const groups = new Map();
+  coveNoteRecords(records).forEach((record) => {
+    const key = record.data?.itemId || record.title;
+    if (!groups.has(key)) groups.set(key, { title: record.title, records: [] });
+    groups.get(key).records.push(record);
+  });
+  return [...groups.values()];
+}
 export function visibleSections(day) {
   return {
     regular: SOURCE_APPS.filter(({ id }) => !FILE_APPS.includes(id) && day.apps?.[id]?.length),
