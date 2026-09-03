@@ -4,7 +4,7 @@
 *{box-sizing:border-box}
 body{margin:0;min-width:320px;background:linear-gradient(180deg,#fff 0,var(--paper) 180px);-webkit-font-smoothing:antialiased}
 button,input,select,textarea{font:inherit;color:inherit}button,a{touch-action:manipulation}
-button{min-height:44px;border:0;background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+button{min-height:44px;border:0;background:transparent;cursor:pointer;display:inline-flex;align-items:center}
 button:disabled{opacity:.35;cursor:not-allowed}
 a{color:var(--rose-deep)}
 :focus-visible{outline:3px solid color-mix(in srgb,var(--rose-deep) 40%,transparent);outline-offset:2px}
