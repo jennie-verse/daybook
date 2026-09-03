@@ -173,10 +173,10 @@ test('B-7: Loom keeps block-activity/subtitle/detail, and sections are ordered F
 });
 
 test('C-7: mdText does not escape hyphens, and Preview never shows a backslash', () => {
-  const record = { app: 'folio', id: 'r1', kind: 'reading-session', at: '2026-08-31T10:00:00-05:00', updatedAt: '2026-08-31T10:00:00-05:00', title: 'civics-1', data: { startedAt: '2026-08-31T09:40:00-05:00', endedAt: '2026-08-31T10:00:00-05:00', activeSeconds: 1200 } };
+  const record = { app: 'folio', id: 'r1', kind: 'reading-session', at: '2026-08-31T10:00:00-05:00', updatedAt: '2026-08-31T10:00:00-05:00', title: 'reading-1', data: { startedAt: '2026-08-31T09:40:00-05:00', endedAt: '2026-08-31T10:00:00-05:00', activeSeconds: 1200 } };
   const output = serializeMarkdown({ day: dayWith({ folio: [record] }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
-  assert.match(output, /`civics-1`/);
-  assert.doesNotMatch(output, /civics\\-1/);
+  assert.match(output, /`reading-1`/);
+  assert.doesNotMatch(output, /reading\\-1/);
 });
 
 test('Cove: a highlight with no note reaches Daybook as a highlight-only entry', () => {

@@ -50,7 +50,7 @@
 - **Front matter time**: iOS Safari 16.4+에서 보이지 않는 특수 공백(U+202F)이 섞이던 문제를 고쳐 문서 전체가 일반 공백만 씁니다.
 - **섹션 내부 정렬**: 각 섹션이 표시되는 시·분 오름차순으로 정렬됩니다.
 - **Loom**: 이전에 빠졌던 block-activity(Changes made this day)와 Subtitle/Note/Detail을 되살렸습니다. 섹션 순서를 Focus → Today → Folio → Petal → Cove → Clip → Slate → Grove → Loom → Quill → Daily note로 정리했습니다.
-- **Markdown escape**: `civics-1` 같은 제목에서 불필요한 백슬래시(`civics\-1`)가 보이던 문제를 고쳤습니다. Preview는 남은 escape 문자도 원래 글자로 표시합니다.
+- **Markdown escape**: `reading-1` 같은 제목에서 불필요한 백슬래시(`reading\-1`)가 보이던 문제를 고쳤습니다. Preview는 남은 escape 문자도 원래 글자로 표시합니다.
 
 이번 범위에서 하지 않은 것: 과거(2026-09-01 이전) 활동에 대한 legacy fallback 줄 추가, `firstAt`–`lastAt` 기반 소급 시간 추정, 생산성 점수/순위 기능. Folio·Slate·Grove·Cove의 새 세션 기록은 각 앱의 이번 배포 이후 활동부터 제공됩니다.
 

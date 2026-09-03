@@ -6,7 +6,7 @@ import { actionLabel, coveGroups, coveNoteRecords, folioGroups, folioNoteRecords
    It intentionally leaves `- . # + ! |` alone: those only mean anything at
    the start of a line, and every place mdText is used inserts text into the
    middle of an already-built line, so escaping them just adds a visible
-   backslash for no structural reason (e.g. "civics-1" becoming "civics\-1"). */
+   backslash for no structural reason (e.g. "reading-1" becoming "reading\-1"). */
 const mdText = (value) => safeText(value).replace(/([\\`*_[\]{}<>~])/g, '\\$1');
 
 const quote = (value) => safeText(value).split('\n').map((line) => `> ${line}`).join('\n');
