@@ -11,13 +11,13 @@ a{color:var(--rose-deep)}
 .skip-link{position:fixed;top:8px;left:8px;z-index:99;display:inline-flex;align-items:center;min-height:44px;transform:translateY(-160%);padding:10px 14px;border-radius:9px;background:var(--ink);color:#fff}.skip-link:focus{transform:none}
 .app-shell{display:grid;grid-template-columns:minmax(0,760px) 286px;gap:42px;width:min(1120px,100%);margin:0 auto;padding:max(30px,env(safe-area-inset-top)) 28px calc(44px + env(safe-area-inset-bottom))}
 .document{min-width:0;background:color-mix(in srgb,var(--surface) 82%,transparent);border:1px solid color-mix(in srgb,var(--line) 76%,transparent);border-radius:2px;box-shadow:0 18px 60px rgba(74,58,64,.035)}
-.day-header{padding:14px 34px 12px;border-bottom:1px solid var(--line)}
-.wordmark{display:flex;align-items:center;gap:7px;margin-bottom:10px;color:var(--rose-deep);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}.book-mark{display:grid;place-items:center;width:22px;height:22px;border:1px solid var(--rose-soft);border-radius:6px;background:var(--tint);font-size:16px}
-.date-row{display:grid;grid-template-columns:44px minmax(150px,1fr) 44px auto;align-items:center;gap:7px}
+.day-header{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:10px;row-gap:8px;padding:10px 34px;border-bottom:1px solid var(--line)}
+.wordmark{display:flex;align-items:center;gap:7px;margin:0;color:var(--rose-deep);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}.book-mark{display:grid;place-items:center;width:22px;height:22px;border:1px solid var(--rose-soft);border-radius:6px;background:var(--tint);font-size:16px}
+.date-row{grid-column:1/-1;display:grid;grid-template-columns:44px minmax(150px,1fr) 44px auto;align-items:center;gap:7px}
 .icon-button{display:grid;place-items:center;width:44px;min-width:44px;height:44px;padding:0;border:1px solid var(--line);border-radius:50%;background:var(--surface);font-size:25px;color:var(--rose-deep)}.icon-button.small{width:44px;min-width:44px;min-height:44px;height:44px;font-size:17px}
 .date-button{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:0 8px;text-align:left}.date-button span{color:var(--muted);font-size:11px}.date-button strong{font-size:24px;font-weight:550;letter-spacing:-.04em}
 .today-button{padding:0 13px;border:1px solid var(--rose-soft);border-radius:22px;background:var(--tint);color:var(--rose-deep);font-weight:600}
-.freshness-row{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:6px;padding-left:59px;color:var(--muted);font-size:10px}.freshness-actions{display:flex;align-items:center;gap:16px}.settings-button{display:none}
+.freshness-row{grid-column:2;grid-row:1;display:flex;justify-content:flex-end;align-items:center;gap:8px;margin:0;padding:0;color:var(--muted);font-size:10px;min-width:0}.freshness-actions{display:flex;align-items:center;gap:8px}.freshness-actions .text-button{margin:-8px 0}.settings-button{display:none}
 .text-button{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:0;color:var(--rose-deep);font-size:10px;font-weight:600;text-decoration:none}.text-button.danger{color:#a94a49}
 .state-banner{margin:18px 34px 0;padding:11px 14px;border-left:3px solid var(--warning);border-radius:0 9px 9px 0;background:#fff8e9;color:#76572e}.state-banner.offline{border-color:var(--subtle);background:#f2edef}.state-banner.partial{border-color:var(--error);background:#fff0ef}
 .view-host{padding:0 34px}
@@ -50,9 +50,8 @@ dialog{padding:0;border:1px solid var(--line);border-radius:18px;background:var(
   .document{border:0;border-radius:0;box-shadow:none;background:transparent}
   .tool-rail{display:none}
   .settings-button{display:inline-flex}
-  .day-header{position:relative;padding:max(10px,env(safe-area-inset-top)) 18px 10px;background:rgba(253,247,248,.94);backdrop-filter:blur(12px)}
-  .wordmark{margin-bottom:6px}.date-row{grid-template-columns:44px minmax(130px,1fr) 44px auto}.date-button strong{font-size:20px}
-  .freshness-row{padding-left:52px}
+  .day-header{position:relative;padding:max(8px,env(safe-area-inset-top)) 18px 8px;background:rgba(253,247,248,.94);backdrop-filter:blur(12px)}
+  .date-row{grid-template-columns:44px minmax(130px,1fr) 44px auto}.date-button strong{font-size:20px}
   .view-host{padding:0 18px}.state-banner{margin:13px 18px 0}
   .source-section{padding:22px 0 18px}.record-row{margin-left:36px}.book-group,.file-group{margin-left:36px}
   .daily-note{padding:25px 18px 35px}
@@ -67,7 +66,7 @@ dialog{padding:0;border:1px solid var(--line);border-radius:18px;background:var(
   .document{border:0;border-radius:0;box-shadow:none;background:transparent}
   .tool-rail{display:none}
   .settings-button{display:inline-flex}
-  .day-header{padding:max(8px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-left)) 8px;background:rgba(253,247,248,.94)}
+  .day-header{padding:max(6px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-left)) 6px;background:rgba(253,247,248,.94)}
   .wordmark{margin-bottom:7px}.freshness-row{margin-top:5px}.view-host{padding:0 max(18px,env(safe-area-inset-left))}
   .daily-note{padding:22px max(18px,env(safe-area-inset-left))}
   .bottom-nav{position:fixed;right:0;bottom:0;left:0;z-index:40;display:grid;grid-template-columns:repeat(3,1fr);padding:4px max(10px,env(safe-area-inset-right)) calc(4px + env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));border-top:1px solid var(--line);background:rgba(255,255,255,.94);backdrop-filter:blur(16px)}
