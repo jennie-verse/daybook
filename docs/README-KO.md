@@ -1,6 +1,6 @@
 # Daybook
 
-Daybook은 Clip, Focus, Loom, Petal, Folio, Quill, Slate, Grove가 private `webapp-data` 저장소의 `journal/` 아래에 기록한 날짜별 투영본을 읽는 오프라인 우선 PWA입니다.
+Daybook은 Clip, Focus, Petal, Folio, Quill, Slate, Grove, Today, Cove가 private `webapp-data` 저장소의 `journal/` 아래에 기록한 날짜별 투영본을 읽는 오프라인 우선 PWA입니다.
 
 - 라이브 URL: <https://jennie-verse.github.io/daybook/>
 - source 앱의 IndexedDB를 직접 읽지 않습니다.

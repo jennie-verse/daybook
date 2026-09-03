@@ -219,4 +219,30 @@ Revision 3 리뷰(`Plan/daybook_markdown-export-plan/Daybook_Markdown_Export_Rev
 
 - [ ] 실제 clip 항목이 Daybook By app/Markdown 화면에 정상 표시되는지 (Clip 앱에서 Include in journal을 켠 뒤 새 항목을 만들어 확인)
 - [ ] today의 Note/Event가 실제로 Daybook Markdown에서 `—`/시각으로 구분되어 보이는지
+
+## 2026-09-03 — loom 소스 제거 (loom deprecate)
+
+사용자가 `loom`을 `Deprecated/`로 옮기고 GitHub 저장소를 archive하기로 결정. Daybook이 `loom`을 활성 소스로
+계속 폴링·연결 안내(Open Journal settings 링크)하면 이미 정지된 앱을 계속 가리키게 되므로, tide→clip 때와
+같은 패턴(활성 소스 목록에서만 제거, 과거 기록 렌더링은 유지)으로 정리.
+
+### 변경
+
+- `src/sources.js`: `SOURCE_APPS`에서 `{ id:'loom', label:'Loom', icon:'▦', href:'../loom/' }` 항목을 삭제(9개로 축소). 이 배열은 `sync.js`가 실제로 폴링하는 앱 목록이기도 해서, 제거하는 순간 loom에 대한 새 요청 자체가 나가지 않습니다.
+- `src/day-model.js`/`src/markdown.js`의 `app === 'loom'` 렌더링 분기는 **그대로 유지**(tide 전례와 동일) — 이미 Daybook에 저장된 과거 Loom 기록은 계속 정상 표시됩니다. 새 Loom 기록만 더 이상 들어오지 않습니다.
+- `index.html`의 `#source-summary` 기본 텍스트를 `10 sources` → `9 sources`로 수정.
+- `tests/static.test.mjs`: "only the ten approved sources" 테스트를 아홉 개 목록(loom 제외)으로 갱신하고, `loom`을 제외 목록(`vault`/`trace`/`atlas`/`shared`)에 추가. `9 sources` 텍스트 검증도 갱신.
+- `sw.js`/`src/version.js`를 `2026.09.03-loomoff1`로 동기화.
+
+### 통과
+
+- [x] `npm test` — **44/44 통과** (테스트 개수는 그대로 — 기존 테스트 내용만 9개 목록에 맞게 갱신)
+- [x] `npm run test:syntax` 통과
+- [x] `curl`로 배포 정적 서버에서 `src/sources.js`를 직접 받아 `loom` 문자열이 전혀 없고 9개 항목만 있는지 확인
+
+### 참고 — loom 자체의 상태
+
+`loom` 앱은 `Published/loom` → `Deprecated/loom`으로 이동(git 히스토리 보존), `jennie-verse/loom` GitHub 저장소는
+삭제가 아니라 **archive**(읽은 전용, GitHub Pages 사이트는 그대로 유지, 필요하면 나중에 unarchive 가능)로
+전환했습니다. `Backup/loom`도 이동 전 `Published/loom`의 최종 상태로 다시 동기화해 그대로 남겨뒀습니다.
 - [ ] 아이콘 글리프(⧉)가 다른 소스 아이콘과 실기기 화면에서 시각적으로 헷갈리지 않는지
