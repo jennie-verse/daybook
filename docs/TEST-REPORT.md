@@ -194,3 +194,29 @@ Revision 3 리뷰(`Plan/daybook_markdown-export-plan/Daybook_Markdown_Export_Rev
 - [ ] iPhone/iPad에서 6px·17px 극단값의 실제 가독성과 레이아웃
 - [ ] 실제 sync 충돌 상황을 만들어(두 기기에서 같은 날짜를 동시에 편집) `Preserved conflicts`에 정상적으로 쌓이는지
 - [ ] Loom 실기기 기록으로 block-activity/Subtitle/Note/Detail이 정상 표시되는지
+
+## 2026-09-03 — tide → clip 소스 교체, today 종류별 표시
+
+계획서: `Plan/today_brain-dump-plan/Today_Brain_Dump_Plan_2026-09-03.md` §7.
+
+### 변경
+
+- `src/sources.js`: `SOURCE_APPS`의 `{ id:'tide', label:'Tide', icon:'≈', href:'../tide/' }`를 `{ id:'clip', label:'Clip', icon:'⧉', href:'../clip/' }`로 교체. 다른 앱 글리프와 겹치지 않음을 육안 확인.
+- `src/day-model.js`: `sourceSummary`/`recordMeta`/`recordBody`의 `app === 'tide'` 분기에 `app === 'clip'`을 함께 매칭하도록 추가(레코드가 어떤 이름으로 오든 동일하게 표시). webapp-data의 `journal/activity/tide/`·`journal/status/tide/`는 이번 today §6 이전 단계에서 이미 삭제됐고, `SOURCE_APPS`가 `clip`만 가져오므로 실제로는 `clip` 경로만 쓰입니다.
+- `src/markdown.js`: `tide()` 함수를 `clip()`으로 이름 변경, 제목을 `## Tide` → `## Clip`으로, `day.apps?.clip`을 읽도록 변경. `dump` kind 렌더러는 지난 캐시 기록(있다면)을 위해 그대로 남겨뒀지만 journal에 더 이상 dump 레코드가 없어 사실상 죽은 분기입니다.
+- `src/markdown.js`의 `today()`: 각 항목의 `data.type`(task/note/event)을 읽어 Note는 `— 내용`, Event는 예정 시각(`HH:MM 내용`), Task 또는 `type` 없는 옛 기록은 기존 체크박스(`[x]`/`[ ] ~~내용~~`)로 표시.
+- docs 3종(README-KO, USER-GUIDE-KO, 이 파일) 갱신 — Tide 언급을 Clip으로 교체, Today 종류별 표시 규칙 추가.
+- 테스트 파일(`tests/markdown.test.mjs`, `tests/merge.test.mjs`, `tests/static.test.mjs`)의 픽스처를 `tide` → `clip`으로 갱신하고, Today 종류별 표시를 검증하는 신규 테스트 1건 추가.
+- `sw.js`/`src/version.js`를 `2026.09.03-clip1`로 동기화.
+
+### 통과
+
+- [x] `npm test` — **44/44 통과** (기존 43건 + 신규 1건)
+- [x] `npm run test:syntax` 통과
+- [x] 콘솔 오류 0건 (정적 검사 기준 — 실기기 라이브 확인은 Pending)
+
+### Pending — 사용자 확인 필요
+
+- [ ] 실제 clip 항목이 Daybook By app/Markdown 화면에 정상 표시되는지 (Clip 앱에서 Include in journal을 켠 뒤 새 항목을 만들어 확인)
+- [ ] today의 Note/Event가 실제로 Daybook Markdown에서 `—`/시각으로 구분되어 보이는지
+- [ ] 아이콘 글리프(⧉)가 다른 소스 아이콘과 실기기 화면에서 시각적으로 헷갈리지 않는지

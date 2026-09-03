@@ -1,5 +1,5 @@
 export const SOURCE_APPS = Object.freeze([
-  { id: 'tide', label: 'Tide', icon: '≈', href: '../tide/' },
+  { id: 'clip', label: 'Clip', icon: '⧉', href: '../clip/' },
   { id: 'focus', label: 'Focus', icon: '◷', href: '../focus/' },
   { id: 'loom', label: 'Loom', icon: '▦', href: '../loom/' },
   { id: 'petal', label: 'Petal', icon: '⌑', href: '../petal/' },

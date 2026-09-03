@@ -5,7 +5,7 @@ const minutes = (seconds) => Math.max(0, Math.round(Number(seconds || 0) / 60));
 const clockFromMinutes = (value) => `${String(Math.floor(Number(value || 0) / 60)).padStart(2, '0')}:${String(Number(value || 0) % 60).padStart(2, '0')}`;
 export const actionLabel = (action) => ({ created: 'Created', added: 'Added', opened: 'Opened', read: 'Read', edited: 'Edited', copied: 'Copied', pinned: 'Pinned', unpinned: 'Unpinned', 'moved-to-today': 'Moved to today', moved: 'Moved', completed: 'Completed', reopened: 'Reopened', deleted: 'Deleted', exported: 'Exported', 'export-requested': 'Export requested', promoted: 'Moved to Today', deferred: 'Moved to Someday' }[action] || action);
 export function sourceSummary(app, records) {
-  if (app === 'tide') return `${records.filter((r) => r.kind === 'clip').length} clips · ${records.filter((r) => r.kind === 'dump').length} dumps · ${records.filter((r) => r.kind === 'item-activity').length} activities`;
+  if (app === 'tide' || app === 'clip') return `${records.filter((r) => r.kind === 'clip').length} clips · ${records.filter((r) => r.kind === 'dump').length} dumps · ${records.filter((r) => r.kind === 'item-activity').length} activities`;
   if (app === 'focus') { const focus = records.filter((r) => r.data?.mode === 'focus'); return `${focus.length} focus · ${records.length - focus.length} breaks · ${minutes(focus.reduce((sum, r) => sum + Number(r.data?.elapsedSeconds || 0), 0))}m`; }
   if (app === 'loom') { const blocks = records.filter((r) => r.kind === 'block'); return `${blocks.length} blocks · ${blocks.filter((r) => r.data?.done).length} done · ${records.length - blocks.length} changes`; }
   if (app === 'petal') return `${new Set(records.map((r) => r.data?.bookId).filter(Boolean)).size} books · ${records.length} activities`;
@@ -24,7 +24,7 @@ export function sourceSummary(app, records) {
 export function recordMeta(record) {
   const data = record.data || {};
   if (['reading-session', 'usage-session'].includes(record.kind)) return `${timeLabel(data.startedAt)}–${timeLabel(data.endedAt)} · ${minutes(data.activeSeconds)}m active`;
-  if (record.app === 'tide') return record.kind === 'item-activity' ? [data.itemType, ...(data.actions || []).map(actionLabel), data.sourceDate && `from ${data.sourceDate}`].filter(Boolean).join(' · ') : [data.label, data.type].filter(Boolean).join(' · ');
+  if (record.app === 'tide' || record.app === 'clip') return record.kind === 'item-activity' ? [data.itemType, ...(data.actions || []).map(actionLabel), data.sourceDate && `from ${data.sourceDate}`].filter(Boolean).join(' · ') : [data.label, data.type].filter(Boolean).join(' · ');
   if (record.app === 'focus') return `${minutes(data.elapsedSeconds)}m${data.plannedSeconds ? ` / planned ${minutes(data.plannedSeconds)}m` : ''} · ${data.completed ? 'Completed' : 'Stopped'}`;
   if (record.app === 'loom') return record.kind === 'block-activity' ? [...(data.actions || []).map(actionLabel), data.sourceDate && `scheduled ${data.sourceDate}`].filter(Boolean).join(' · ') : `${clockFromMinutes(data.start)}–${clockFromMinutes(Number(data.start || 0) + Number(data.duration || 0))} · ${data.done ? 'Done' : 'Not done'}`;
   if (record.app === 'petal') { if (record.kind === 'reading-session') return `${Math.round(Number(data.startProgression || 0) * 100)}% → ${Math.round(Number(data.endProgression || 0) * 100)}% · ${minutes(data.activeSeconds)}m active`; return record.kind.replaceAll('-', ' '); }
@@ -35,7 +35,7 @@ export function recordMeta(record) {
 }
 export function recordBody(record) {
   const data = record.data || {};
-  if (record.app === 'tide') return safeText(data.text || '');
+  if (record.app === 'tide' || record.app === 'clip') return safeText(data.text || '');
   if (record.app === 'focus') return [data.subject && `Subject: ${data.subject}`, data.task && `Task: ${data.task}`].filter(Boolean).join('\n');
   if (record.app === 'loom') return [data.subtitle, data.note, data.detail].filter(Boolean).join('\n');
   if (record.app === 'petal') return [data.author, data.chapterLabel, data.quote, data.note, data.definition, data.example, data.sentence, data.koreanNote].filter(Boolean).join('\n');

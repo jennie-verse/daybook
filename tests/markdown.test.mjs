@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { formatClock, formatDuration, formatTimeRange, serializeMarkdown } from '../src/markdown.js';
 
-const emptyApps = { tide: [], focus: [], loom: [], today: [], petal: [], folio: [], cove: [], quill: [], slate: [], grove: [] };
+const emptyApps = { clip: [], focus: [], loom: [], today: [], petal: [], folio: [], cove: [], quill: [], slate: [], grove: [] };
 const dayWith = (apps, failures = []) => ({ apps: { ...emptyApps, ...apps }, records: Object.values(apps).flat(), failures });
 const session = (app, kind, title, startedAt, endedAt, activeSeconds) => ({ app, id: `${app}-session`, kind, at: endedAt, updatedAt: endedAt, title, data: { startedAt, endedAt, activeSeconds } });
 
@@ -43,6 +43,18 @@ test('Today groups additions and strikes incomplete tasks', () => {
   assert.doesNotMatch(output, /Changes made this day|Created|Moved to/);
 });
 
+test("Today renders by data.type — dash for Note, HH:MM for Event, checkbox for Task or missing type", () => {
+  const today = [
+    { app: 'today', id: 'n1', kind: 'task', at: '2026-08-31T09:00:00-05:00', updatedAt: '2026-08-31T09:00:00-05:00', title: 'A stray thought', data: { done: false, type: 'note' } },
+    { app: 'today', id: 'e1', kind: 'task', at: '2026-08-31T14:30:00-05:00', updatedAt: '2026-08-31T14:30:00-05:00', title: 'Dentist', data: { done: false, type: 'event' } },
+    { app: 'today', id: 't1', kind: 'task', at: '2026-08-31T09:05:00-05:00', updatedAt: '2026-08-31T09:05:00-05:00', title: 'Untyped task', data: { done: false } },
+  ];
+  const output = serializeMarkdown({ day: dayWith({ today }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
+  assert.match(output, /- — A stray thought/);
+  assert.match(output, /- 2:30 PM Dentist/);
+  assert.match(output, /- \[ \] ~~Untyped task~~/);
+});
+
 test('reading and usage apps export ranges and active duration only', () => {
   const started = '2026-08-31T13:10:00-05:00'; const ended = '2026-08-31T13:55:00-05:00';
   const output = serializeMarkdown({ day: dayWith({ folio: [session('folio', 'reading-session', 'Paper.pdf', started, ended, 2100)], cove: [session('cove', 'reading-session', 'Article', started, ended, 1800)], slate: [session('slate', 'usage-session', 'Research board', started, ended, 1200)], grove: [session('grove', 'usage-session', 'SQL map', started, ended, 900)] }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
@@ -53,12 +65,12 @@ test('reading and usage apps export ranges and active duration only', () => {
   assert.doesNotMatch(output, /Added|Opened|Read$/m);
 });
 
-test('Petal sessions and Tide content keep the compact shared clock style', () => {
+test('Petal sessions and Clip content keep the compact shared clock style', () => {
   const petal = { ...session('petal', 'reading-session', 'Book', '2026-08-31T08:00:00-05:00', '2026-08-31T08:25:00-05:00', 1200), data: { startedAt: '2026-08-31T08:00:00-05:00', endedAt: '2026-08-31T08:25:00-05:00', activeSeconds: 1200, bookId: 'book', bookTitle: 'Book', startProgression: .1, endProgression: .2 } };
-  const tide = { app: 'tide', id: 't1', kind: 'clip', at: '2026-08-31T15:14:00-05:00', updatedAt: '2026-08-31T15:14:00-05:00', title: 'Clip', data: { text: 'A useful idea' } };
-  const output = serializeMarkdown({ day: dayWith({ petal: [petal], tide: [tide] }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
+  const clipRecord = { app: 'clip', id: 't1', kind: 'clip', at: '2026-08-31T15:14:00-05:00', updatedAt: '2026-08-31T15:14:00-05:00', title: 'Clip', data: { text: 'A useful idea' } };
+  const output = serializeMarkdown({ day: dayWith({ petal: [petal], clip: [clipRecord] }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
   assert.match(output, /## Petal[\s\S]*8:00–8:25 AM · \(20m\) · \*Book\* · 10% → 20%/);
-  assert.match(output, /## Tide\n\n- 3:14 PM\n\n {2}> A useful idea/);
+  assert.match(output, /## Clip\n\n- 3:14 PM\n\n {2}> A useful idea/);
 });
 
 test('partial and cached status remain distinct', () => {
@@ -125,9 +137,9 @@ test('B-3: Petal has the same tight spacing as Focus/Folio (no blank line betwee
 });
 
 test('B-4: Tide quotes nest two spaces under the list item and survive Compact mode', () => {
-  const clip = { app: 'tide', id: 't1', kind: 'clip', at: '2026-08-31T21:08:00-05:00', updatedAt: '2026-08-31T21:08:00-05:00', title: 'Clip', data: { text: 'line one\nline two' } };
-  const full = serializeMarkdown({ day: dayWith({ tide: [clip] }), date: '2026-08-31', detail: 'full', snapshotAt: '2026-08-31T22:00:00-05:00' });
-  const compact = serializeMarkdown({ day: dayWith({ tide: [clip] }), date: '2026-08-31', detail: 'compact', snapshotAt: '2026-08-31T22:00:00-05:00' });
+  const clip = { app: 'clip', id: 't1', kind: 'clip', at: '2026-08-31T21:08:00-05:00', updatedAt: '2026-08-31T21:08:00-05:00', title: 'Clip', data: { text: 'line one\nline two' } };
+  const full = serializeMarkdown({ day: dayWith({ clip: [clip] }), date: '2026-08-31', detail: 'full', snapshotAt: '2026-08-31T22:00:00-05:00' });
+  const compact = serializeMarkdown({ day: dayWith({ clip: [clip] }), date: '2026-08-31', detail: 'compact', snapshotAt: '2026-08-31T22:00:00-05:00' });
   assert.match(full, /- 9:08 PM\n\n {2}> line one\n {2}> line two\n/);
   assert.match(compact, /- 9:08 PM\n\n {2}> line one\n {2}> line two\n/);
 });

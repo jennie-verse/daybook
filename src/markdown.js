@@ -136,6 +136,15 @@ function todayDone(data, actions, task) {
   return actions.includes('completed') || task?.data?.done === true;
 }
 
+// A record's own data.type (task/note/event) decides the marker used in
+// Daybook: — for a Note, HH:MM for an Event's scheduled time, ☐/☑ for a
+// plain Task. Records from before `type` existed have no data.type at all
+// and fall back to the original checkbox rendering (B-… today rename plan
+// §7 — additive, must not change how already-written records render).
+function todayEntryType(type) {
+  return type === 'note' || type === 'event' ? type : 'task';
+}
+
 function today(records) {
   const tasks = new Map(records.filter((record) => record.kind === 'task').map((record) => [record.id, record]));
   const entries = new Map();
@@ -152,10 +161,19 @@ function today(records) {
       destination,
       done: todayDone(data, actions, task),
       at: data.lastAt || record.updatedAt || record.at,
+      type: todayEntryType(task?.data?.type),
+      scheduledAt: task?.at,
     });
   });
   tasks.forEach((task, id) => {
-    if (!entries.has(id)) entries.set(id, { title: task.title, destination: 'today', done: task.data?.done === true, at: task.at });
+    if (!entries.has(id)) entries.set(id, {
+      title: task.title,
+      destination: 'today',
+      done: task.data?.done === true,
+      at: task.at,
+      type: todayEntryType(task.data?.type),
+      scheduledAt: task.at,
+    });
   });
   const out = ['## Today'];
   for (const [destination, heading] of [['today', 'Added to Today'], ['someday', 'Added to Someday']]) {
@@ -164,7 +182,11 @@ function today(records) {
       .sort((a, b) => String(a.at).localeCompare(String(b.at)));
     if (!rows.length) continue;
     out.push('', `### ${heading}`, '');
-    rows.forEach((entry) => out.push(entry.done ? `- [x] ${mdText(entry.title)}` : `- [ ] ~~${mdText(entry.title)}~~`));
+    rows.forEach((entry) => {
+      if (entry.type === 'note') { out.push(`- — ${mdText(entry.title)}`); return; }
+      if (entry.type === 'event') { out.push(`- ${formatClock(entry.scheduledAt || entry.at)} ${mdText(entry.title)}`); return; }
+      out.push(entry.done ? `- [x] ${mdText(entry.title)}` : `- [ ] ~~${mdText(entry.title)}~~`);
+    });
   }
   return out.length > 1 ? out.join('\n') : '';
 }
@@ -259,10 +281,13 @@ function cove(records, full) {
   return out.join('\n').trimEnd();
 }
 
-// Tide: creation time and body only, always (Compact only shortens Folio's
-// and Petal's long annotations — Tide is already "little time + little
-// content", so Compact must not empty it out; B-4).
-function tide(records) {
+// Clip (formerly Tide): creation time and body only, always (Compact only
+// shortens Folio's and Petal's long annotations — Clip is already "little
+// time + little content", so Compact must not empty it out; B-4).
+// The 'dump' kind is kept in this filter only for old cached day snapshots
+// from before Dump was removed from the app (plan §6) — journal has none
+// left to write, so this branch is effectively dead going forward.
+function clip(records) {
   const rows = [];
   const items = sortedRecords(records.filter((record) => record.kind === 'clip' || record.kind === 'dump'));
   items.forEach((record) => {
@@ -270,7 +295,7 @@ function tide(records) {
     const text = record.data?.text;
     if (text) { rows.push(''); rows.push(indentQuote(text)); rows.push(''); }
   });
-  return rows.length ? ['## Tide', '', ...rows].join('\n').trimEnd() : '';
+  return rows.length ? ['## Clip', '', ...rows].join('\n').trimEnd() : '';
 }
 
 function usage(app, records) {
@@ -328,7 +353,7 @@ export function serializeMarkdown({ day, date, note = '', detail = 'full', snaps
     folio(day.apps?.folio || [], full),
     petal(day.apps?.petal || [], full),
     cove(day.apps?.cove || [], full),
-    tide(day.apps?.tide || []),
+    clip(day.apps?.clip || []),
     usage('Slate', day.apps?.slate || []),
     usage('Grove', day.apps?.grove || []),
     loom(day.apps?.loom || [], full),
