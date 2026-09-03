@@ -46,7 +46,7 @@ dialog{padding:0;border:1px solid var(--line);border-radius:18px;background:var(
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));z-index:100;transform:translate(-50%,30px);padding:11px 15px;border-radius:12px;background:var(--ink);color:#fff;font-size:10px;opacity:0;pointer-events:none;transition:.2s}.toast.visible{transform:translate(-50%,0);opacity:1}
 @media(max-width:799px){
   body{background:var(--paper)}
-  .app-shell{display:block;width:100%;padding:0 0 calc(82px + env(safe-area-inset-bottom))}
+  .app-shell{display:block;width:100%;padding:0 0 calc(56px + env(safe-area-inset-bottom))}
   .document{border:0;border-radius:0;box-shadow:none;background:transparent}
   .tool-rail{display:none}
   .settings-button{display:inline-flex}
@@ -55,21 +55,21 @@ dialog{padding:0;border:1px solid var(--line);border-radius:18px;background:var(
   .view-host{padding:0 18px}.state-banner{margin:13px 18px 0}
   .source-section{padding:22px 0 18px}.record-row{margin-left:36px}.book-group,.file-group{margin-left:36px}
   .daily-note{padding:25px 18px 35px}
-  .bottom-nav{position:fixed;right:0;bottom:0;left:0;z-index:40;display:grid;grid-template-columns:repeat(3,1fr);padding:7px max(10px,env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));border-top:1px solid var(--line);background:rgba(255,255,255,.94);backdrop-filter:blur(16px)}
-  .bottom-nav button{display:grid;place-items:center;gap:2px;min-height:48px;color:var(--muted);font-size:8px}.bottom-nav button span{font-size:16px}.bottom-nav button[aria-current=page]{color:var(--rose-deep);font-weight:650}
+  .bottom-nav{position:fixed;right:0;bottom:0;left:0;z-index:40;display:grid;grid-template-columns:repeat(3,1fr);padding:2px max(10px,env(safe-area-inset-right)) calc(2px + env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));border-top:1px solid var(--line);background:rgba(255,255,255,.94);backdrop-filter:blur(16px)}
+  .bottom-nav button{display:grid;place-items:center;gap:1px;min-height:44px;color:var(--muted);font-size:8px}.bottom-nav button span{font-size:14px}.bottom-nav button[aria-current=page]{color:var(--rose-deep);font-weight:650}
   .timeline:before{left:59px}.timeline-entry{grid-template-columns:61px 1fr;gap:13px}
   .markdown-output{margin-top:14px;padding:15px;font-size:9px}.markdown-heading{align-items:flex-end}
 }
 @media(max-height:500px) and (max-width:900px){
   body{background:var(--paper)}
-  .app-shell{display:block;width:100%;padding:0 0 calc(70px + env(safe-area-inset-bottom))}
+  .app-shell{display:block;width:100%;padding:0 0 calc(48px + env(safe-area-inset-bottom))}
   .document{border:0;border-radius:0;box-shadow:none;background:transparent}
   .tool-rail{display:none}
   .settings-button{display:inline-flex}
   .day-header{padding:max(6px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-left)) 6px;background:rgba(253,247,248,.94)}
   .wordmark{margin-bottom:7px}.freshness-row{margin-top:5px}.view-host{padding:0 max(18px,env(safe-area-inset-left))}
   .daily-note{padding:22px max(18px,env(safe-area-inset-left))}
-  .bottom-nav{position:fixed;right:0;bottom:0;left:0;z-index:40;display:grid;grid-template-columns:repeat(3,1fr);padding:4px max(10px,env(safe-area-inset-right)) calc(4px + env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));border-top:1px solid var(--line);background:rgba(255,255,255,.94);backdrop-filter:blur(16px)}
+  .bottom-nav{position:fixed;right:0;bottom:0;left:0;z-index:40;display:grid;grid-template-columns:repeat(3,1fr);padding:0 max(10px,env(safe-area-inset-right)) env(safe-area-inset-bottom) max(10px,env(safe-area-inset-left));border-top:1px solid var(--line);background:rgba(255,255,255,.94);backdrop-filter:blur(16px)}
   .bottom-nav button{display:grid;place-items:center;gap:1px;min-height:44px;color:var(--muted);font-size:8px}.bottom-nav button span{font-size:14px}.bottom-nav button[aria-current=page]{color:var(--rose-deep);font-weight:650}
 }
 @media(max-width:410px){.today-button{font-size:9px;padding:0 9px}.date-row{gap:3px}.date-button{padding-left:4px}.day-header,.view-host,.daily-note{padding-left:15px;padding-right:15px}.state-banner{margin-left:15px;margin-right:15px}}
