@@ -55,7 +55,14 @@ test('touch targets meet the 44px rule', () => {
   assert.match(css, /\.icon-button\.small\{width:44px/);
   assert.match(css, /\.rail-tabs button\{[^}]*min-height:44px/);
   assert.match(css, /\.source-status\{[^}]*min-height:44px/);
-  assert.match(css, /\.segmented button\{[^}]*min-height:44px/);
+  // .segmented button's visible pill is intentionally shorter than 44px (it
+  // paints a background, so min-height:44 there just made the box itself
+  // huge for a one-line label — see Backup/VERIFICATION.md 2026-09-03). The
+  // 44px target is recovered with an invisible ::after extending the hit
+  // area instead, so this checks for that pairing rather than a literal
+  // min-height:44px.
+  assert.match(css, /\.segmented button\{[^}]*position:relative/);
+  assert.match(css, /\.segmented button::after\{content:"";position:absolute;inset:-8px 0\}/);
   assert.match(css, /\.markdown-actions button,[^}]*min-height:44px/);
   for (const block of css.match(/\.bottom-nav button\{[^}]*\}/g) || []) assert.match(block, /min-height:4[4-9]px|min-height:[5-9]\dpx/, block);
 });
@@ -90,7 +97,7 @@ test('the bundled font ships its licence', () => {
 test('the cache version moved with the shipped files', () => {
   // cache-first: leaving the version alone leaves installed devices on the old
   // files for ever.
-  assert.match(read('sw.js'), /const VERSION = '2026.09.03-boxfix2';/);
+  assert.match(read('sw.js'), /const VERSION = '2026.09.03-boxfix3';/);
 });
 
 test('account-portable settings report custom-domain sync configuration failures', () => {
