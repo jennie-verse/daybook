@@ -46,7 +46,7 @@ test('Today groups additions and marks undone tasks cancelled for that day (Pers
 test("Today renders by data.type — hyphen bullet for Note, HH:MM for Event, checkbox for Task or missing type", () => {
   const today = [
     { app: 'today', id: 'n1', kind: 'task', at: '2026-08-31T09:00:00-05:00', updatedAt: '2026-08-31T09:00:00-05:00', title: 'A stray thought', data: { done: false, type: 'note' } },
-    { app: 'today', id: 'e1', kind: 'task', at: '2026-08-31T14:30:00-05:00', updatedAt: '2026-08-31T14:30:00-05:00', title: 'Dentist', data: { done: false, type: 'event' } },
+    { app: 'today', id: 'e1', kind: 'task', at: '2026-08-31T14:30:00-05:00', updatedAt: '2026-08-31T14:30:00-05:00', title: 'Dentist', data: { done: false, type: 'event', hasTime: true } },
     { app: 'today', id: 't1', kind: 'task', at: '2026-08-31T09:05:00-05:00', updatedAt: '2026-08-31T09:05:00-05:00', title: 'Untyped task', data: { done: false } },
   ];
   const output = serializeMarkdown({ day: dayWith({ today }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
@@ -54,6 +54,18 @@ test("Today renders by data.type — hyphen bullet for Note, HH:MM for Event, ch
   assert.doesNotMatch(output, /— A stray thought/);
   assert.match(output, /- 2:30 PM Dentist/);
   assert.match(output, /- \[-\] ~~Untyped task~~/);
+});
+
+test('an Event with no scheduled time shows the 00:00 all-day placeholder and sorts before timed events', () => {
+  const today = [
+    { app: 'today', id: 'e-timed', kind: 'task', at: '2026-08-31T14:30:00-05:00', updatedAt: '2026-08-31T14:30:00-05:00', title: 'Dentist', data: { done: false, type: 'event', hasTime: true } },
+    { app: 'today', id: 'e-allday', kind: 'task', at: '2026-08-31T20:00:00-05:00', updatedAt: '2026-08-31T20:00:00-05:00', title: 'Friend birthday', data: { done: false, type: 'event', hasTime: false } },
+  ];
+  const output = serializeMarkdown({ day: dayWith({ today }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
+  assert.match(output, /- 00:00 Friend birthday/);
+  assert.match(output, /- 2:30 PM Dentist/);
+  const addedIndex = output.indexOf('### Added to Today');
+  assert.ok(output.indexOf('Friend birthday', addedIndex) < output.indexOf('Dentist', addedIndex), 'all-day event lists before the timed event');
 });
 
 test('reading and usage apps export ranges and active duration only', () => {

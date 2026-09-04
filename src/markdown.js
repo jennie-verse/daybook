@@ -163,6 +163,7 @@ function today(records) {
       at: data.lastAt || record.updatedAt || record.at,
       type: todayEntryType(task?.data?.type),
       scheduledAt: task?.at,
+      hasTime: task?.data?.hasTime === true,
     });
   });
   tasks.forEach((task, id) => {
@@ -173,20 +174,34 @@ function today(records) {
       at: task.at,
       type: todayEntryType(task.data?.type),
       scheduledAt: task.at,
+      hasTime: task.data?.hasTime === true,
     });
   });
   const out = ['## Today'];
   // Someday tasks live in the app's own Backlog, not the day's journal — a
   // day is a record of what happened, and a task deferred to "someday" is
   // explicitly not happening today.
+  // An Event sorts by its own scheduled instant (no time set counts as
+  // midnight, so it leads the day) rather than the activity/sync timestamp
+  // used for Task/Note ordering. The time-of-day is zeroed out whenever
+  // hasTime is false, regardless of what the fallback instant itself says.
+  const sortInstant = (entry) => {
+    if (entry.type !== 'event') return entry.at;
+    const instant = entry.scheduledAt || entry.at;
+    if (entry.hasTime) return instant;
+    return String(safeText(instant)).replace(/T\d{2}:\d{2}/, 'T00:00');
+  };
   const rows = [...entries.values()]
     .filter((entry) => entry.destination === 'today')
-    .sort((a, b) => String(a.at).localeCompare(String(b.at)));
+    .sort((a, b) => String(sortInstant(a)).localeCompare(String(sortInstant(b))));
   if (rows.length) {
     out.push('', '### Added to Today', '');
     rows.forEach((entry) => {
       if (entry.type === 'note') { out.push(`- ${mdText(entry.title)}`); return; }
-      if (entry.type === 'event') { out.push(`- ${formatClock(entry.scheduledAt || entry.at)} ${mdText(entry.title)}`); return; }
+      // No time set (all-day, e.g. a birthday) shows the plain 00:00
+      // placeholder instead of running the fallback instant through
+      // formatClock, which would otherwise print a misleading 12/24h clock.
+      if (entry.type === 'event') { out.push(`- ${entry.hasTime ? formatClock(entry.scheduledAt || entry.at) : '00:00'} ${mdText(entry.title)}`); return; }
       // A day's Markdown is a closed record of that day: a task added to
       // Today but not done by the time it's read is treated as cancelled
       // for that day, not left open (the app itself still shows it as
