@@ -1,4 +1,4 @@
-const VERSION = '2026.09.04-undone-cancelled';
+const VERSION = '2026.09.04-preview-cancelled-checkbox';
 const CACHE = `daybook-${VERSION}`;
 const SHELL = [
   './', './index.html', './assets/app.css',

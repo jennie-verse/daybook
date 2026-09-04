@@ -89,8 +89,12 @@ function renderSafeMarkdownPreview(host, value) {
     // item (Tide's "  > body", B-4) as well as appear at the top level.
     const quoteLine = line.match(/^ {0,2}> (.*)$/);
     if (quoteLine) { host.append(node('blockquote', '', unescapeMd(quoteLine[1]))); return; }
-    const task = line.match(/^- \[([ x])\] (.*)$/i);
-    if (task) { const row = node('p', 'preview-task'); const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.disabled = true; checkbox.checked = task[1].toLowerCase() === 'x'; row.append(checkbox); appendPreviewInline(row, task[2]); host.append(row); return; }
+    // [x] Done, [ ] Todo, [-] Cancelled (Personal Standards Guide notation —
+    // a cancelled task's ~~title~~ already carries the strikethrough
+    // through appendPreviewInline; the checkbox itself shows the guide's
+    // dash marker via the native indeterminate dash glyph).
+    const task = line.match(/^- \[([ x-])\] (.*)$/i);
+    if (task) { const row = node('p', 'preview-task'); const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.disabled = true; const state = task[1].toLowerCase(); checkbox.checked = state === 'x'; checkbox.indeterminate = state === '-'; row.append(checkbox); appendPreviewInline(row, task[2]); host.append(row); return; }
     if (/^- /.test(line)) { const row = node('p', 'preview-list-item', '• '); appendPreviewInline(row, line.slice(2)); host.append(row); return; }
     host.append(node('p', '', unescapeMd(line)));
   });

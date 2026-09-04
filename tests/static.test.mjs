@@ -97,7 +97,7 @@ test('the bundled font ships its licence', () => {
 test('the cache version moved with the shipped files', () => {
   // cache-first: leaving the version alone leaves installed devices on the old
   // files for ever.
-  assert.match(read('sw.js'), /const VERSION = '2026.09.04-undone-cancelled';/);
+  assert.match(read('sw.js'), /const VERSION = '2026.09.04-preview-cancelled-checkbox';/);
 });
 
 test('account-portable settings report custom-domain sync configuration failures', () => {
@@ -109,4 +109,16 @@ test('account-portable settings report custom-domain sync configuration failures
   assert.match(sync, /configurationError: error\.message/);
   assert.match(app, /state\.day\?\.configurationError/);
   assert.match(app, /sync unavailable on this domain/);
+});
+
+// markdown.js's today() can emit "- [-] ~~title~~" for a cancelled task; the
+// Preview renderer's task regex must recognize '-' as a checkbox state (not
+// just 'x'/' '), or a cancelled task falls through to the generic bullet
+// branch and shows the literal "[-]" text instead of a checkbox.
+test("Preview's task-line regex in app.js recognizes the [-] cancelled checkbox state", () => {
+  assert.match(read('src/app.js'), /const task = line\.match\(\/\^- \\\[\(\[ x-\]\)\\\] \(\.\*\)\$\/i\);/);
+  const pattern = /^- \[([ x-])\] (.*)$/i;
+  assert.ok(pattern.test('- [x] Finished'));
+  assert.ok(pattern.test('- [ ] Open'));
+  assert.ok(pattern.test('- [-] ~~Cancelled~~'));
 });
