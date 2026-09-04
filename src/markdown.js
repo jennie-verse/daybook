@@ -183,9 +183,9 @@ function today(records) {
     if (!rows.length) continue;
     out.push('', `### ${heading}`, '');
     rows.forEach((entry) => {
-      if (entry.type === 'note') { out.push(`- — ${mdText(entry.title)}`); return; }
+      if (entry.type === 'note') { out.push(`- ${mdText(entry.title)}`); return; }
       if (entry.type === 'event') { out.push(`- ${formatClock(entry.scheduledAt || entry.at)} ${mdText(entry.title)}`); return; }
-      out.push(entry.done ? `- [x] ${mdText(entry.title)}` : `- [ ] ~~${mdText(entry.title)}~~`);
+      out.push(entry.done ? `- [x] ${mdText(entry.title)}` : `- [ ] ${mdText(entry.title)}`);
     });
   }
   return out.length > 1 ? out.join('\n') : '';

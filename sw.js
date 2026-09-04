@@ -1,4 +1,4 @@
-const VERSION = '2026.09.03-designpass1';
+const VERSION = '2026.09.04-bujo-notation';
 const CACHE = `daybook-${VERSION}`;
 const SHELL = [
   './', './index.html', './assets/app.css',
