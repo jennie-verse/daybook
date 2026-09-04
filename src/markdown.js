@@ -176,12 +176,14 @@ function today(records) {
     });
   });
   const out = ['## Today'];
-  for (const [destination, heading] of [['today', 'Added to Today'], ['someday', 'Added to Someday']]) {
-    const rows = [...entries.values()]
-      .filter((entry) => entry.destination === destination)
-      .sort((a, b) => String(a.at).localeCompare(String(b.at)));
-    if (!rows.length) continue;
-    out.push('', `### ${heading}`, '');
+  // Someday tasks live in the app's own Backlog, not the day's journal — a
+  // day is a record of what happened, and a task deferred to "someday" is
+  // explicitly not happening today.
+  const rows = [...entries.values()]
+    .filter((entry) => entry.destination === 'today')
+    .sort((a, b) => String(a.at).localeCompare(String(b.at)));
+  if (rows.length) {
+    out.push('', '### Added to Today', '');
     rows.forEach((entry) => {
       if (entry.type === 'note') { out.push(`- ${mdText(entry.title)}`); return; }
       if (entry.type === 'event') { out.push(`- ${formatClock(entry.scheduledAt || entry.at)} ${mdText(entry.title)}`); return; }

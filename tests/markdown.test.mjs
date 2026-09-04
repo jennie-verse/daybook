@@ -39,7 +39,7 @@ test('Today groups additions and leaves open tasks unstruck (Personal Standards 
   ];
   const output = serializeMarkdown({ day: dayWith({ today }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
   assert.match(output, /### Added to Today[\s\S]*- \[x\] Finished[\s\S]*- \[ \] Still open/);
-  assert.match(output, /### Added to Someday[\s\S]*- \[ \] Later/);
+  assert.doesNotMatch(output, /Added to Someday|Later/);
   assert.doesNotMatch(output, /~~/);
   assert.doesNotMatch(output, /Changes made this day|Created|Moved to/);
 });
@@ -96,11 +96,17 @@ test('A-3: a task completed then reopened is not shown done, even if "completed"
 test('A-3: finalStatus alone (no explicit done field) is still trusted over stale actions', () => {
   const record = {
     app: 'today', id: 'y:2026-08-31', kind: 'task-activity',
-    at: '2026-08-31T09:10:00-05:00', updatedAt: '2026-08-31T09:10:00-05:00', title: 'Someday task',
-    data: { destination: 'someday', finalStatus: 'someday', actions: ['created', 'completed', 'deferred'] },
+    at: '2026-08-31T09:10:00-05:00', updatedAt: '2026-08-31T09:10:00-05:00', title: 'Today task',
+    data: { destination: 'today', finalStatus: 'today', actions: ['created', 'completed', 'deferred'] },
   };
   const output = serializeMarkdown({ day: dayWith({ today: [record] }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
-  assert.match(output, /### Added to Someday\n\n- \[ \] Someday task/);
+  assert.match(output, /### Added to Today\n\n- \[ \] Today task/);
+});
+
+test('Someday tasks never reach the day\'s Markdown — Today section is omitted entirely when everything is deferred', () => {
+  const someday = { app: 'today', id: 'z:2026-08-31', kind: 'task-activity', at: '2026-08-31T09:10:00-05:00', updatedAt: '2026-08-31T09:10:00-05:00', title: 'Read later', data: { destination: 'someday', done: false, actions: ['deferred'] } };
+  const output = serializeMarkdown({ day: dayWith({ today: [someday] }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
+  assert.doesNotMatch(output, /## Today|Read later|Someday/);
 });
 
 test('B-1: Cove distinguishes exact, approximate, and duration-less external reads', () => {
