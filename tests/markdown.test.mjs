@@ -31,16 +31,15 @@ test('Focus omits labels, planning, and completion noise', () => {
   assert.doesNotMatch(output, /Focus session|planned|Completed/);
 });
 
-test('Today groups additions and leaves open tasks unstruck (Personal Standards Guide notation)', () => {
+test('Today groups additions and marks undone tasks cancelled for that day (Personal Standards Guide notation)', () => {
   const today = [
     { app: 'today', id: 'a', kind: 'task', at: '2026-08-31T09:00:00-05:00', updatedAt: '2026-08-31T09:00:00-05:00', title: 'Finished', data: { done: true } },
     { app: 'today', id: 'b:2026-08-31', kind: 'task-activity', at: '2026-08-31T09:10:00-05:00', updatedAt: '2026-08-31T09:10:00-05:00', title: 'Later', data: { destination: 'someday', done: false, actions: ['deferred'] } },
     { app: 'today', id: 'c', kind: 'task', at: '2026-08-31T09:20:00-05:00', updatedAt: '2026-08-31T09:20:00-05:00', title: 'Still open', data: { done: false } },
   ];
   const output = serializeMarkdown({ day: dayWith({ today }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
-  assert.match(output, /### Added to Today[\s\S]*- \[x\] Finished[\s\S]*- \[ \] Still open/);
+  assert.match(output, /### Added to Today[\s\S]*- \[x\] Finished[\s\S]*- \[-\] ~~Still open~~/);
   assert.doesNotMatch(output, /Added to Someday|Later/);
-  assert.doesNotMatch(output, /~~/);
   assert.doesNotMatch(output, /Changes made this day|Created|Moved to/);
 });
 
@@ -54,7 +53,7 @@ test("Today renders by data.type — hyphen bullet for Note, HH:MM for Event, ch
   assert.match(output, /- A stray thought/);
   assert.doesNotMatch(output, /— A stray thought/);
   assert.match(output, /- 2:30 PM Dentist/);
-  assert.match(output, /- \[ \] Untyped task/);
+  assert.match(output, /- \[-\] ~~Untyped task~~/);
 });
 
 test('reading and usage apps export ranges and active duration only', () => {
@@ -89,7 +88,7 @@ test('A-3: a task completed then reopened is not shown done, even if "completed"
     data: { destination: 'today', done: false, finalStatus: 'today', actions: ['created', 'promoted', 'completed', 'reopened'] },
   };
   const output = serializeMarkdown({ day: dayWith({ today: [reopened] }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
-  assert.match(output, /### Added to Today\n\n- \[ \] SQL/);
+  assert.match(output, /### Added to Today\n\n- \[-\] ~~SQL~~/);
   assert.doesNotMatch(output, /- \[x\] SQL/);
 });
 
@@ -100,7 +99,7 @@ test('A-3: finalStatus alone (no explicit done field) is still trusted over stal
     data: { destination: 'today', finalStatus: 'today', actions: ['created', 'completed', 'deferred'] },
   };
   const output = serializeMarkdown({ day: dayWith({ today: [record] }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
-  assert.match(output, /### Added to Today\n\n- \[ \] Today task/);
+  assert.match(output, /### Added to Today\n\n- \[-\] ~~Today task~~/);
 });
 
 test('Someday tasks never reach the day\'s Markdown — Today section is omitted entirely when everything is deferred', () => {

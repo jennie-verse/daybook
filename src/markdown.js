@@ -187,7 +187,11 @@ function today(records) {
     rows.forEach((entry) => {
       if (entry.type === 'note') { out.push(`- ${mdText(entry.title)}`); return; }
       if (entry.type === 'event') { out.push(`- ${formatClock(entry.scheduledAt || entry.at)} ${mdText(entry.title)}`); return; }
-      out.push(entry.done ? `- [x] ${mdText(entry.title)}` : `- [ ] ${mdText(entry.title)}`);
+      // A day's Markdown is a closed record of that day: a task added to
+      // Today but not done by the time it's read is treated as cancelled
+      // for that day, not left open (the app itself still shows it as
+      // open/pending — this only affects the day's journal rendering).
+      out.push(entry.done ? `- [x] ${mdText(entry.title)}` : `- [-] ~~${mdText(entry.title)}~~`);
     });
   }
   return out.length > 1 ? out.join('\n') : '';
