@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#fdf7f8">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://api.github.com; img-src 'self' data:; font-src 'self'; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'none'">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon-192.png">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="./assets/app.css">
+  <title>Daybook</title>
+</head>
+<body>
+  <a class="skip-link" href="#day-content">Skip to journal</a>
+  <div class="app-shell">
+    <main id="day-content" class="document" tabindex="-1">
+      <header class="day-header">
+        <div class="wordmark" aria-label="Daybook"><span class="book-mark" aria-hidden="true">⌇</span> Daybook</div>
+        <div class="date-row">
+          <button class="icon-button" id="previous-day" aria-label="Previous day">‹</button>
+          <button class="date-button" id="date-button" aria-haspopup="dialog">
+            <span id="date-weekday">Sunday</span>
+            <strong id="date-title">August 17</strong>
+          </button>
+          <button class="icon-button" id="next-day" aria-label="Next day">›</button>
+          <button class="today-button" id="today-button">Today</button>
+        </div>
+        <div class="freshness-row">
+          <span id="freshness">Not refreshed yet</span>
+          <div class="freshness-actions">
+            <button class="text-button" id="refresh-button">Refresh</button>
+            <button class="text-button settings-button" id="open-settings-compact" aria-haspopup="dialog" aria-label="Settings"><span aria-hidden="true">⚙</span></button>
+          </div>
+        </div>
+      </header>
+      <div id="connection-state" class="state-banner" role="status" aria-live="polite"></div>
+      <section id="view-host" class="view-host" aria-live="polite"></section>
+      <section class="daily-note" aria-labelledby="daily-note-title">
+        <div class="section-heading">
+          <div><span class="section-icon" aria-hidden="true">✎</span><h2 id="daily-note-title">Daily note</h2></div>
+          <span id="note-status" class="note-status">Saved on this device</span>
+        </div>
+        <textarea id="note-text" rows="7" spellcheck="true" placeholder="Add anything you want to remember about this day…"></textarea>
+      </section>
+    </main>
+    <aside class="tool-rail" aria-label="Daybook tools">
+      <section class="rail-card calendar-card">
+        <div class="rail-title"><strong id="rail-month">August 2026</strong><button class="icon-button small" id="rail-today" aria-label="Go to today">•</button></div>
+        <div id="mini-calendar" class="mini-calendar" aria-label="Month calendar"></div>
+      </section>
+      <section class="rail-card">
+        <p class="rail-label">View</p>
+        <div class="rail-tabs" role="tablist" aria-label="Journal views">
+          <button role="tab" data-view="by-app" aria-selected="true"><span aria-hidden="true">☷</span>By app</button>
+          <button role="tab" data-view="timeline" aria-selected="false"><span aria-hidden="true">⌁</span>Timeline</button>
+          <button role="tab" data-view="markdown" aria-selected="false"><span aria-hidden="true">#</span>Markdown</button>
+        </div>
+      </section>
+      <section class="rail-card actions-card">
+        <p class="rail-label">Markdown</p>
+        <button id="copy-markdown"><span aria-hidden="true">□</span> Copy Markdown</button>
+        <button id="download-markdown"><span aria-hidden="true">↓</span> Download .md</button>
+      </section>
+      <section class="rail-card status-card">
+        <p class="rail-label">Sources</p>
+        <div id="source-summary">9 sources · not refreshed</div>
+        <button class="text-button" id="open-settings"><span aria-hidden="true">⚙</span> Settings & source status</button>
+      </section>
+    </aside>
+  </div>
+  <nav class="bottom-nav" aria-label="Journal views">
+    <button data-view="by-app" aria-current="page"><span aria-hidden="true">☷</span>By app</button>
+    <button data-view="timeline"><span aria-hidden="true">⌁</span>Timeline</button>
+    <button data-view="markdown"><span aria-hidden="true">#</span>Markdown</button>
+  </nav>
+  <dialog id="date-dialog" class="sheet-dialog">
+    <form method="dialog">
+      <div class="dialog-heading"><h2>Choose a date</h2><button class="icon-button" value="cancel" aria-label="Close">×</button></div>
+      <label class="field">Date<input id="date-input" type="date"></label>
+      <button id="choose-date" value="default" class="primary-button">Open date</button>
+    </form>
+  </dialog>
+  <dialog id="settings-dialog" class="settings-dialog">
+    <form method="dialog">
+      <div class="dialog-heading"><div><p class="eyebrow">DAYBOOK</p><h2>Settings</h2></div><button class="icon-button" value="cancel" aria-label="Close">×</button></div>
+      <section>
+        <h3>Reading & export</h3>
+        <div class="field-row"><label class="field">Text size<select id="text-size"><option value="6">6 px</option><option value="8">8 px</option><option value="10">10 px</option><option value="12">12 px</option><option value="14">14 px</option><option value="17">17 px</option></select></label><button type="button" class="text-button" id="text-size-reset">Reset</button></div>
+        <label class="field">Markdown detail<select id="markdown-detail"><option value="full">Full source text</option><option value="compact">Compact summaries</option></select></label>
+        <p class="settings-note">Compact changes only what Daybook displays and exports. It does not remove content already uploaded. Choose Upload content separately in each source app.</p>
+      </section>
+      <section>
+        <h3>Private repository</h3>
+        <p class="help">Daybook reads only <code>journal/</code> projections from the private <code>webapp-data</code> repository owned by the GitHub Pages account.</p>
+        <label class="field">GitHub token<input id="token-input" type="password" autocomplete="off" placeholder="Paste to connect or replace"></label>
+        <div class="inline-status"><span id="token-status">No token saved</span><button type="button" class="text-button danger" id="remove-token">Remove token</button></div>
+        <label class="field">This Daybook device<input id="context-input" autocomplete="off" maxlength="64" placeholder="e.g. iphone-home"></label>
+      </section>
+      <section>
+        <div class="section-heading"><h3>Source status</h3><button type="button" class="text-button" id="settings-refresh">Refresh</button></div>
+        <div id="source-status-list" class="source-status-list"></div>
+      </section>
+      <section>
+        <h3>Local data</h3>
+        <p id="cache-size" class="help">Cache size is being calculated…</p>
+        <div class="button-row"><button type="button" id="download-backup">Download settings & notes</button><label class="file-button">Restore backup<input id="restore-backup" type="file" accept="application/json"></label><button type="button" id="clear-cache">Clear activity cache</button><button type="button" id="view-conflicts">Preserved conflicts</button></div>
+      </section>
+      <section>
+        <h3>About</h3>
+        <p id="app-version" class="help">App version …</p>
+      </section>
+      <button id="save-settings" value="default" class="primary-button">Save & refresh</button>
+    </form>
+  </dialog>
+  <dialog id="conflict-dialog" class="settings-dialog">
+    <form method="dialog"><div class="dialog-heading"><h2>Preserved conflicts</h2><button class="icon-button" value="cancel" aria-label="Close">×</button></div><p class="help">When a sync conflict happens, the version that lost is kept here instead of being discarded. Copy anything you need, then discard it.</p><div id="conflict-list"></div></form>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>
