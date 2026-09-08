@@ -6,7 +6,7 @@
 - **Timeline**: 모든 record를 시간순으로 표시합니다. Details 또는 Show source text로 긴 원문을 펼칠 수 있습니다.
 - **Markdown**: 안전한 Preview와 Source를 전환하고, 같은 serializer 결과를 복사하거나 `journal-YYYY-MM-DD.md`로 다운로드합니다.
 
-## Markdown Export 형식
+## By app Markdown Export 형식
 
 - Properties는 `date`, export snapshot `time`, `status`만 포함합니다. `timezone`과 `apps`는 제외합니다.
 - 모든 시각은 AM/PM으로 표시합니다. 같은 AM/PM 안의 구간은 `10:02–10:32 AM`, 경계를 넘으면 `11:50 AM–12:10 PM`처럼 씁니다.
@@ -53,3 +53,38 @@
 - **Text size**는 하우스 스타일 6단계(6/8/10/12/14/17px)이며, 옆의 `Reset`으로 기본값(12px)으로 되돌립니다.
 - **Clear activity cache**와 **Restore backup**은 실행 전에 확인을 거칩니다. 다른 기기의 기록이나 Journal에는 영향이 없습니다.
 - Settings의 Local data에 있는 **Preserved conflicts** 버튼으로, Sync 도중 더 최신 원격 버전에 밀린 이 기기의 이전 메모 버전을 확인할 수 있습니다. 각 항목을 복사하거나 더 이상 필요 없으면 개별적으로 지울 수 있습니다.
+
+
+## 모든 기록을 시간순 Markdown으로 보기
+
+1. **Markdown** → **Chronological**을 선택합니다(새 기본값).
+2. **Preview**로 읽거나 **Source**로 원문을 봅니다.
+3. **Copy Markdown** 또는 **Share / Download .md**로 같은 내용을 꺼냅니다.
+4. 이전 앱별 출력이 필요하면 **By app**을 고릅니다. 마지막 선택은 기억됩니다.
+
+예시:
+
+```text
+08:00 AM [Clip] 아침 메모 · clip
+08:10 AM - 08:30 AM [Today] 샤워
+08:20 AM - 09:00 AM [Focus] 공부 · Session
+09:05 AM [Quill] 일기.md · Activity summary: Edited
+```
+
+Today에서 제목 없이 시각만 적은 기록도 포함됩니다. 종료 시각을 나중에 추가·제거하면 동일 기록에 반영됩니다. Timeline 화면의 **View chronological Markdown**으로도 바로 이동할 수 있습니다.
+
+### Today 기록이 들어오는 경로
+
+- **같은 브라우저·저장소**: Today의 로컬 Timeline을 바로 읽습니다. Today와 Daybook을 함께 열어 두면 저장 변경을 자동으로 반영합니다. 필요하면 Refresh를 누르세요.
+- **다른 기기 / 저장소가 분리된 홈 화면 앱**: Today Settings에서 **Sync this device**를 켜 원격에 저장하고, Daybook Settings에 같은 private 저장소 접근 토큰을 연결한 뒤 Refresh합니다.
+- Timeline은 Today의 **Journal 스위치가 아닌 Sync 경로**에서 읽습니다. 그 밖의 앱 기록은 기존처럼 각 앱의 Include in journal 및 본문 공유 설정을 따릅니다.
+- Today의 충돌 버전이 있으면 한 표시본과 Review 안내가 나옵니다. Today에서 해결한 뒤 다시 Refresh합니다.
+- Daybook에서 Today 원본을 편집하거나 삭제하지 않습니다. 시각·제목 변경은 Today에서 합니다.
+
+### 시각을 해석하는 기준
+
+실제 세션은 시작 시각, 단일 기록은 발생 시각, 일별 조작 요약은 마지막 조작 시각으로 정렬합니다. 과거 앱이 기록하지 않은 개별 사용 시각은 복원할 수 없습니다. 예정 Task·계획 블록은 실제 활동 시각이 없는 별도 항목으로 유지합니다. Daily note도 시각을 추정하지 않고 문서 마지막에 둡니다.
+
+표시는 Daybook 기기 시간대로 통일하고 문서에 시간대 이름을 적습니다. 원본 날짜 기준으로 취득한 기록의 표시 날짜가 달라지면 날짜를 함께 적습니다. DST 전환 부근은 GMT 오프셋을 표시합니다. 자정을 넘은 Today 활동은 시작 날짜에 한 번만 표시합니다.
+
+네트워크·파일 오류 시 마지막 정상 기록을 유지하고 부분 상태를 알립니다. 기록이 보이지 않으면 원본 앱의 저장/Sync 또는 Journal 설정과 Daybook Refresh를 확인하세요.

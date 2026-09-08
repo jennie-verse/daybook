@@ -15,7 +15,7 @@ export function sourceSummary(app, records) {
     const notes = records.filter((record) => !['file-activity', 'reading-session'].includes(record.kind));
     if (notes.length) return `${new Set(notes.map((record) => record.data?.documentId || record.title)).size} documents · ${notes.length} notes`;
   }
-  if (app === 'today') { const tasks = records.filter((r) => r.kind === 'task'); return `${tasks.length} task${tasks.length === 1 ? '' : 's'} · ${tasks.filter((r) => r.data?.done).length} done`; }
+  if (app === 'today') { const activities = records.filter(r => r.kind === 'timeline-entry'); const tasks = records.filter((r) => r.kind === 'task'); return `${tasks.length} task${tasks.length === 1 ? '' : 's'} · ${tasks.filter((r) => r.data?.done).length} done${activities.length ? ` · ${activities.length} activities` : ''}`; }
   if (app === 'cove' && records.some((record) => record.kind === 'reading-session')) { const sessions = records.filter((record) => record.kind === 'reading-session'); return `${sessions.length} reading session${sessions.length === 1 ? '' : 's'} · ${minutes(sessions.reduce((sum, record) => sum + Number(record.data?.activeSeconds || 0), 0))}m`; }
   if (app === 'cove') { const saved = records.filter((r) => r.kind === 'link-saved').length; const read = records.filter((r) => r.kind === 'link-activity' && (r.data?.actions || []).includes('opened')).length; const highlights = records.filter((r) => r.kind === 'highlight-created').length; return `${saved} saved · ${read} read · ${highlights} highlights`; }
   if (['slate', 'grove'].includes(app) && records.some((record) => record.kind === 'usage-session')) { const sessions = records.filter((record) => record.kind === 'usage-session'); return `${sessions.length} session${sessions.length === 1 ? '' : 's'} · ${minutes(sessions.reduce((sum, record) => sum + Number(record.data?.activeSeconds || 0), 0))}m`; }
@@ -23,6 +23,7 @@ export function sourceSummary(app, records) {
 }
 export function recordMeta(record) {
   const data = record.data || {};
+  if (record.kind === 'timeline-entry') return `${timeLabel(data.startedAt)}${data.endedAt ? `–${timeLabel(data.endedAt)}` : ''}${data.isRunning ? ' · In progress' : ''}${data.conflict ? ' · Review edits in Today' : ''}`;
   if (['reading-session', 'usage-session'].includes(record.kind)) return `${timeLabel(data.startedAt)}–${timeLabel(data.endedAt)} · ${minutes(data.activeSeconds)}m active`;
   if (record.app === 'tide' || record.app === 'clip') return record.kind === 'item-activity' ? [data.itemType, ...(data.actions || []).map(actionLabel), data.sourceDate && `from ${data.sourceDate}`].filter(Boolean).join(' · ') : [data.label, data.type].filter(Boolean).join(' · ');
   if (record.app === 'focus') return `${minutes(data.elapsedSeconds)}m${data.plannedSeconds ? ` / planned ${minutes(data.plannedSeconds)}m` : ''} · ${data.completed ? 'Completed' : 'Stopped'}`;

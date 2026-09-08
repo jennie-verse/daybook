@@ -1,13 +1,13 @@
-const VERSION = '2026.09.08-review2';
+const VERSION = '2026.09.08-chronology1';
 const CACHE = `daybook-${VERSION}`;
 const SHELL = [
   './', './index.html', './assets/app.css',
   './assets/fonts/lexend-400.woff2', './assets/fonts/lexend-700.woff2',
   './src/app.js', './src/sources.js', './src/merge.js', './src/day-model.js',
-  './src/markdown.js', './src/store.js', './src/deployment.js', './src/sync.js', './src/version.js',
+  './src/chronology.js', './src/today-timeline.js', './src/markdown.js', './src/store.js', './src/deployment.js', './src/sync.js', './src/version.js',
   './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',
 ];
-const SHARED = ['../shared/v1/sync.js', '../shared/v2/journal.js'];
+const SHARED = ['../today/src/timeline-model.js', '../today/src/timeline-time.js', '../shared/v1/sync.js', '../shared/v2/journal.js'];
 // cache: 'reload' bypasses the browser's own HTTP cache — without it, a
 // recently-visited asset can still be HTTP-cache-fresh and get copied
 // straight into the new versioned CACHE unchanged, silently defeating a

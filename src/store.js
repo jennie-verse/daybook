@@ -66,8 +66,8 @@ export async function mergeRemoteNote(date, remote) {
 }
 export async function readLocalNote(date) { return getItem('notes', date); }
 export async function preserveConflict(date, item) { return putItem('noteConflicts', { ...item, key: `${date}:${item.updatedAt || Date.now()}` }); }
-export async function getCacheBytes() { return new TextEncoder().encode(JSON.stringify(await listItems('days'))).byteLength; }
-export async function backupData(settings) { return { v: 1, app: 'daybook', exportedAt: new Date().toISOString(), settings: { textSize: settings.textSize, markdownDetail: settings.markdownDetail, context: settings.context }, notes: await listItems('notes') }; }
+export async function getCacheBytes() { return new TextEncoder().encode(JSON.stringify([await listItems('days'), await listItems('sourceFiles')])).byteLength; }
+export async function backupData(settings) { return { v: 1, app: 'daybook', exportedAt: new Date().toISOString(), settings: { textSize: settings.textSize, markdownDetail: settings.markdownDetail, markdownLayout: settings.markdownLayout, context: settings.context }, notes: await listItems('notes') }; }
 export async function restoreData(payload) {
   if (payload?.v !== 1 || payload?.app !== 'daybook' || !Array.isArray(payload.notes)) throw new Error('Invalid Daybook backup');
   const dates = new Set();
@@ -86,5 +86,6 @@ export async function restoreData(payload) {
   const settings = {};
   if ([6, 8, 10, 12, 14, 17].includes(Number(payload.settings?.textSize))) settings.textSize = String(payload.settings.textSize);
   if (['full', 'compact'].includes(payload.settings?.markdownDetail)) settings.markdownDetail = payload.settings.markdownDetail;
+  if (['chronological', 'by-app'].includes(payload.settings?.markdownLayout)) settings.markdownLayout = payload.settings.markdownLayout;
   return settings;
 }

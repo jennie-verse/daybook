@@ -43,3 +43,18 @@
 - 검증: 전체 기존 테스트 및 추가 회귀 테스트, JavaScript 구문 검사. 격리된 Chromium에서 데스크톱 1280×900/모바일 390×844 저장·새로고침·실패 복구 검증. Browser plugin not available; bundled Playwright 사용.
 - 주입 검증: 지연 Promise로 느린 업로드와 후속 요청 재현.
 - 한계: 실제 iPhone Safari/Home Screen 및 개인 계정의 실서버 동기화는 직접 시험하지 않음.
+
+
+## 2026-09-08 통합 시간순 Markdown
+
+빌드 `2026.09.08-chronology1`. Browser plugin not available; macOS bundled Playwright Chromium, 로컬 정적 서버와 격리 프로필.
+
+- Node 테스트 65개 및 전체 JS 문법 검사 통과.
+- Timeline/Markdown 동일 시간 모델: 앱 간 정렬, 양쪽 AM/PM, 빈 제목, 실제 사용 시작과 업로드 시각 구별, Task projection 중복 방지, 일별 조작 요약, 시각 불명, Focus 휴식, 자정 횡단·DST GMT 오프셋 검사.
+- 실제 Today 모델과 가상 원격 API: SHA 재다운로드 생략, 동시 수정 보존/해결, 깨진 파일 캐시 보존, 시작 날짜 이동, 삭제 후 오프라인에서 되살아나지 않음.
+- 새 브라우저에서 Daybook만 열었을 때 today-db를 생성하지 않음 확인.
+- Today에서 시작만 입력→Daybook Chronological Source 표시→Today 종료 추가→Daybook 자동 반영→실제 .md 다운로드 내용 확인→By app 전환.
+- 390×844 / 844×390 / 820×1180 / 1180×820, 글자 크기 6·8·10·12·14·17 검사에서 페이지 가로 넘침 없음. 모바일/태블릿 스크린샷 확인.
+- Service Worker 활성화 후 오프라인 재실행에서 통합 Markdown과 Daily note 보존. 검사한 흐름의 페이지 오류 없음.
+
+명령: `npm test`, `npm run test:syntax`; 별도 Playwright 스크립트 `/tmp/daybook-chronology.cjs`, `/tmp/daybook-reader.cjs`. 테스트 원격은 가상 API이며 사용자 토큰·데이터를 사용하지 않았다. 실제 iPhone/iPad Safari 및 실계정 비공개 Sync는 미검증. 배포 결과와 변경 파일 전체 목록은 작업 공간 Plan/daybook_chronology-plan/Release_Report.md에 기록한다.

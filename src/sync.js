@@ -1,3 +1,4 @@
+import { readTodayTimeline } from './today-timeline.js';
 import { SOURCE_APPS } from './sources.js';
 import { mergeSourceResults } from './merge.js';
 import { acknowledgeNote, cacheDay, getItem, mergeRemoteNote, preserveConflict, readCachedDay } from './store.js';
@@ -5,7 +6,7 @@ import { webappDataConfig } from './deployment.js';
 const config = (token) => webappDataConfig(token);
 let modulesPromise;
 const modules = () => modulesPromise ||= Promise.all([import('../../shared/v1/sync.js'), import('../../shared/v2/journal.js')]).then(([v1, journal]) => ({ v1, journal }));
-export async function refreshDay(date, token) {
+async function refreshJournalDay(date, token) {
   const cached = await readCachedDay(date);
   if (!token) return { ...(cached || { date, apps: Object.fromEntries(SOURCE_APPS.map(({ id }) => [id, []])), records: [] }), failures: SOURCE_APPS.map(({ id }) => id), cached: Boolean(cached), needsToken: true };
   let repoConfig;
@@ -54,4 +55,21 @@ export async function flushNote(date, token, context) {
     try { const current = await v1.readFile(config(token), path); let existing = null; try { existing = current.exists ? JSON.parse(current.content) : null; } catch { existing = null; } if (existing?.markdown && existing.markdown !== pending.markdown && Date.parse(existing.updatedAt || 0) > Date.parse(pending.updatedAt)) await preserveConflict(date, { ...existing, date }); const body = `${JSON.stringify({ v: 1, context, date, updatedAt: pending.updatedAt, markdown: pending.markdown }, null, 2)}\n`; await v1.writeFile(config(token), path, body, { ...(current.sha ? { sha: current.sha } : {}), message: `journal: update daily note ${date}` }); return acknowledgeNote(date, pending); } catch (error) { if (error?.type !== 'conflict' || attempt === 3) throw error; }
   }
   return false;
+}
+
+export async function refreshDay(date, token) {
+  let day;
+  try { day = await refreshJournalDay(date, token); }
+  catch { day = await refreshJournalDay(date, ''); day.diagnostics = [{ app: 'journal', message: 'Journal refresh failed; cached records are shown.' }]; }
+  let options = {};
+  if (token) { try { options = { config: config(token), api: (await modules()).v1 }; } catch { /* journal reports configuration errors */ } }
+  try {
+    const timeline = await readTodayTimeline(date, options);
+    day.apps.today = [...(day.apps.today || []).filter(r => r.kind !== 'timeline-entry'), ...timeline.records];
+    day.records = Object.values(day.apps).flat().filter(r => !r.deleted);
+    day.timelineErrors = timeline.errors;
+    if (timeline.errors.length) day.diagnostics = [...(day.diagnostics || []), ...timeline.errors.map(message => ({ app: 'today', message }))];
+    await cacheDay(date, day);
+  } catch { day.timelineErrors = ['Today Timeline could not be refreshed. Cached records are shown.']; }
+  return day;
 }

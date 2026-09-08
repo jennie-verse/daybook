@@ -1,3 +1,4 @@
+import { chronologyRows, rowTime, currentZone } from './chronology.js';
 import { SOURCE_APPS, SOURCE_BY_ID } from './sources.js';
 import { fileAppRecords, folioGroups, petalGroups, recordBody, recordMeta, sourceSummary, timeLabel, visibleSections } from './day-model.js';
 import { serializeMarkdown } from './markdown.js';
@@ -23,7 +24,7 @@ const rememberedDate = () => { const saved = read('daybook.date', ''); return is
 // Updates never clear notes, queued changes, or saved settings.
 const state = {
   date: rememberedDate(), view: read('daybook.view', 'by-app'), token: read('sync.token.v1'), context: read('daybook.context'),
-  textSize: read('daybook.textSize', '12'), markdownDetail: read('daybook.markdownDetail', 'full'), day: null, note: '', markdownSnapshotAt: null, statuses: {}, availability: new Map(), refreshing: false,
+  textSize: read('daybook.textSize', '12'), markdownDetail: read('daybook.markdownDetail', 'full'), markdownLayout: read('daybook.markdownLayout', 'chronological'), day: null, note: '', markdownSnapshotAt: null, statuses: {}, availability: new Map(), refreshing: false,
 };
 let dayRequest = 0; let noteRevision = 0; let outboxBusy = false; let outboxRequested = false;
 const noteDrafts = new Map();
@@ -66,11 +67,29 @@ function renderByApp() {
   return fragment;
 }
 function renderTimeline() {
-  const fragment = document.createDocumentFragment(); const heading = node('div', 'view-title'); heading.append(node('div', 'eyebrow', 'CHRONOLOGICAL'), node('h2', '', 'Timeline'), node('p', '', `${state.day.records.length} records across ${new Set(state.day.records.map((record) => record.app)).size} apps`)); fragment.append(heading);
-  const timeline = node('div', 'timeline'); state.day.records.forEach((record) => timeline.append(entryNode(record, { timeline: true }))); if (!state.day.records.length) timeline.append(node('p', 'empty-inline', 'No records this day.')); fragment.append(timeline); return fragment;
+  const fragment = document.createDocumentFragment(), rows = chronologyRows(state.day), zone = currentZone();
+  const heading = node('div', 'view-title'); heading.append(node('div', 'eyebrow', 'CHRONOLOGICAL'), node('h2', '', 'Timeline'), node('p', '', `${rows.length} records · ${zone}`)); fragment.append(heading);
+  const info = node('p', 'chronology-help', 'Today activities and app history, ordered by start or recorded time. Activity summaries show their last recorded action.'); fragment.append(info);
+  const timeline = node('div', 'unified-timeline');
+  for (const row of rows) {
+    const article = node('article', 'unified-entry');
+    article.append(node('p', 'unified-time', rowTime(row, zone, state.date)));
+    const title = node('strong', '', row.description || 'No activity name');
+    const link = node('a', 'source-link', row.label); link.href = SOURCE_BY_ID.get(row.record.app)?.href || '#';
+    const heading = node('div', 'record-heading'); heading.append(title, link); article.append(heading);
+    if (row.meaning) article.append(node('p', 'record-meta', row.meaning));
+    if (row.body) { const details = node('details', 'record-details'); details.append(node('summary', '', 'Show source text'), node('pre', '', row.body)); article.append(details); }
+    timeline.append(article);
+  }
+  if (!rows.length) timeline.append(node('p', 'empty-inline', 'No records this day.'));
+  const exportButton = node('button', 'primary-button', 'View chronological Markdown'); exportButton.onclick = () => { state.markdownLayout = 'chronological'; write('daybook.markdownLayout', state.markdownLayout); setView('markdown'); };
+  fragment.append(timeline, exportButton); return fragment;
 }
 function renderMarkdown() {
   const fragment = document.createDocumentFragment(); const heading = node('div', 'view-title markdown-heading'); const top = node('div'); top.append(node('div', 'eyebrow', 'EXPORT'), node('h2', '', 'Markdown')); const segmented = node('div', 'segmented'); const preview = node('button', 'active', 'Preview'); const source = node('button', '', 'Source'); segmented.append(preview, source); heading.append(top, segmented); fragment.append(heading);
+  const layoutControls = node('div', 'markdown-layout segmented'); layoutControls.setAttribute('aria-label', 'Markdown ordering');
+  for (const [value, label] of [['chronological', 'Chronological'], ['by-app', 'By app']]) { const choice = node('button', state.markdownLayout === value ? 'active' : '', label); choice.setAttribute('aria-pressed', String(state.markdownLayout === value)); choice.onclick = () => { state.markdownLayout = value; write('daybook.markdownLayout', value); invalidateMarkdownSnapshot(); render(); }; layoutControls.append(choice); }
+  fragment.append(layoutControls, node('p', 'chronology-help', 'Chronological combines Today Timeline and app records. Same-browser Today records are read locally; other devices require Today Sync.'));
   const output = node('div', 'markdown-output preview-mode'); const setMode = (mode) => { preview.classList.toggle('active', mode === 'preview'); source.classList.toggle('active', mode === 'source'); output.classList.toggle('preview-mode', mode === 'preview'); output.replaceChildren(); if (mode === 'source') output.append(node('pre', 'markdown-source', markdown())); else renderSafeMarkdownPreview(output, markdown()); }; preview.onclick = () => setMode('preview'); source.onclick = () => setMode('source'); setMode('preview'); fragment.append(output);
   const actions = node('div', 'markdown-actions'); const copy = node('button', 'primary-button', 'Copy Markdown'); const download = node('button', '', 'Share / Download .md'); copy.onclick = copyMarkdown; download.onclick = downloadMarkdown; actions.append(copy, download); fragment.append(actions); return fragment;
 }
@@ -115,7 +134,7 @@ function appendPreviewInline(host, value) {
   if (offset < value.length) host.append(document.createTextNode(unescapeMd(value.slice(offset))));
 }
 function invalidateMarkdownSnapshot() { state.markdownSnapshotAt = null; }
-function markdown() { state.markdownSnapshotAt ||= new Date(); return serializeMarkdown({ day: state.day || emptyDay(state.date), date: state.date, note: state.note, detail: state.markdownDetail, snapshotAt: state.markdownSnapshotAt }); }
+function markdown() { state.markdownSnapshotAt ||= new Date(); return serializeMarkdown({ day: state.day || emptyDay(state.date), date: state.date, note: state.note, detail: state.markdownDetail, layout: state.view === 'timeline' ? 'chronological' : state.markdownLayout, snapshotAt: state.markdownSnapshotAt }); }
 function render() {
   document.documentElement.style.setProperty('--base-size', `${state.textSize}px`); updateDateHeader(); const host = $('view-host'); host.replaceChildren(state.view === 'timeline' ? renderTimeline() : state.view === 'markdown' ? renderMarkdown() : renderByApp());
   document.querySelectorAll('[data-view]').forEach((button) => { const active = button.dataset.view === state.view; button.setAttribute('aria-selected', String(active)); if (button.closest('.bottom-nav')) active ? button.setAttribute('aria-current', 'page') : button.removeAttribute('aria-current'); });
@@ -127,6 +146,7 @@ function setBanner() {
   else if (!navigator.onLine) { text = 'Offline · cached data. Daily note changes will sync when you reconnect.'; banner.classList.add('offline'); }
   else if (state.day?.configurationError) { text = state.day.configurationError; banner.classList.add('warning'); }
   else if (state.day?.failures?.length) { text = `Some sources could not be refreshed: ${state.day.failures.map((id) => SOURCE_BY_ID.get(id).label).join(', ')}.`; banner.classList.add('partial'); }
+  else if (state.day?.timelineErrors?.length) { text = 'Today Timeline could not be fully refreshed. Available records are shown; try Refresh.'; banner.classList.add('partial'); }
   else if (state.day?.diagnostics?.length) { text = `${state.day.diagnostics.length} source file${state.day.diagnostics.length === 1 ? '' : 's'} could not be read. Other records are available.`; banner.classList.add('partial'); }
   banner.textContent = text; banner.hidden = !text;
 }
@@ -260,9 +280,10 @@ function bind() {
   $('note-text').addEventListener('compositionstart', () => { composing = true; noteRevision += 1; }); $('note-text').addEventListener('compositionend', () => { composing = false; persistNote(); }); $('note-text').addEventListener('input', () => { state.note = $('note-text').value; invalidateMarkdownSnapshot(); if (!composing) persistNote(); });
   $('remove-token').onclick = () => { state.token = ''; remove('sync.token.v1'); $('token-status').textContent = 'No token saved'; $('token-input').value = ''; toast('Token removed from this device'); };
   $('text-size-reset').onclick = () => { $('text-size').value = '12'; };
-  $('clear-cache').onclick = async () => { if (!confirm('Clear the activity cache on this device? Nothing on other devices or in Journal is affected.')) return; await clearStore('days'); $('cache-size').textContent = 'Activity cache: cleared'; toast('Activity cache cleared'); };
+  $('clear-cache').onclick = async () => { if (!confirm('Clear the activity cache on this device? Nothing on other devices or in Journal is affected.')) return; await clearStore('days'); await clearStore('sourceFiles'); $('cache-size').textContent = 'Activity cache: cleared'; toast('Activity cache cleared'); };
   $('download-backup').onclick = async () => downloadText(JSON.stringify(await backupData(state), null, 2), `daybook-backup-${today()}.json`, 'application/json');
-  $('restore-backup').onchange = async (event) => { try { const file = event.target.files[0]; event.target.value = ''; if (!file) return; const payload = JSON.parse(await file.text()); if (!confirm('Restore this backup? Notes on this device that share a date with the backup will be overwritten.')) return; const settings = await restoreData(payload); if (settings.textSize) { state.textSize = settings.textSize; write('daybook.textSize', state.textSize); } if (settings.markdownDetail) { state.markdownDetail = settings.markdownDetail; write('daybook.markdownDetail', state.markdownDetail); } toast('Backup restored'); await loadDay({ remote: false }); } catch { toast('This is not a valid Daybook backup'); } };
+  $('restore-backup').onchange = async (event) => { try { const file = event.target.files[0]; event.target.value = ''; if (!file) return; const payload = JSON.parse(await file.text()); if (!confirm('Restore this backup? Notes on this device that share a date with the backup will be overwritten.')) return; const settings = await restoreData(payload); if (settings.textSize) { state.textSize = settings.textSize; write('daybook.textSize', state.textSize); } if (settings.markdownDetail) { state.markdownDetail = settings.markdownDetail; write('daybook.markdownDetail', state.markdownDetail); } if (settings.markdownLayout) { state.markdownLayout = settings.markdownLayout; write('daybook.markdownLayout', state.markdownLayout); } toast('Backup restored'); await loadDay({ remote: false }); } catch { toast('This is not a valid Daybook backup'); } };
+  if (typeof BroadcastChannel !== 'undefined') { const timelineChannel = new BroadcastChannel('today-timeline'); timelineChannel.onmessage = () => { clearTimeout(resumeTimer); resumeTimer = setTimeout(() => loadDay({ remote: false }), 250); }; }
   window.addEventListener('online', async () => { setBanner(); await flushOutbox(); await loadDay(); }); window.addEventListener('offline', () => { setBanner(); render(); });
   const refreshOnResume = () => { if (document.visibilityState === 'hidden' || Date.now() - lastRemoteRefreshAt <= 60_000) return; clearTimeout(resumeTimer); resumeTimer = setTimeout(() => loadDay(), 250); };
   window.addEventListener('pageshow', refreshOnResume); document.addEventListener('visibilitychange', refreshOnResume);

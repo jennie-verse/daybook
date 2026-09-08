@@ -1,3 +1,4 @@
+import { chronologicalMarkdown } from './chronology.js';
 import { actionLabel, coveGroups, coveNoteRecords, folioGroups, folioNoteRecords, petalGroups, safeText } from './day-model.js';
 
 /* ── inline Markdown helpers ─────────────────────────────────────────────
@@ -358,7 +359,7 @@ function quill(records) {
   return rows.length ? ['## Quill', '', ...rows].join('\n') : '';
 }
 
-export function serializeMarkdown({ day, date, note = '', detail = 'full', snapshotAt = new Date() }) {
+export function serializeMarkdown({ day, date, note = '', detail = 'full', layout = 'by-app', timeZone, snapshotAt = new Date() }) {
   const status = day.cached ? 'cached' : day.failures?.length ? 'partial' : 'complete';
   const parsedDate = new Date(`${date}T12:00:00`);
   const title = Number.isNaN(parsedDate.getTime()) ? date : parsedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
@@ -368,9 +369,10 @@ export function serializeMarkdown({ day, date, note = '', detail = 'full', snaps
   // Section order per the plan's §2.4 fixture: Focus, Today, Folio, Petal,
   // Cove, Tide, Slate, Grove — then Loom/Quill (kept, just moved after the
   // reviewed apps rather than interleaved with them), then Daily note.
-  const sections = [
+  const sections = layout === 'chronological' ? [chronologicalMarkdown(day, date, { detail, timeZone }), `## Daily note\n\n${safeText(note)}`.trimEnd()] : [
     focus(day.apps?.focus || []),
     today(day.apps?.today || []),
+    (day.apps?.today || []).some(r => r.kind === 'timeline-entry') ? chronologicalMarkdown({ records: day.apps.today.filter(r => r.kind === 'timeline-entry') }, date, { detail, timeZone }).replace('## Timeline', '### Today activities') : '',
     folio(day.apps?.folio || [], full),
     petal(day.apps?.petal || [], full),
     cove(day.apps?.cove || [], full),
