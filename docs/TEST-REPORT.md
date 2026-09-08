@@ -58,3 +58,12 @@
 - Service Worker 활성화 후 오프라인 재실행에서 통합 Markdown과 Daily note 보존. 검사한 흐름의 페이지 오류 없음.
 
 명령: `npm test`, `npm run test:syntax`; 별도 Playwright 스크립트 `/tmp/daybook-chronology.cjs`, `/tmp/daybook-reader.cjs`. 테스트 원격은 가상 API이며 사용자 토큰·데이터를 사용하지 않았다. 실제 iPhone/iPad Safari 및 실계정 비공개 Sync는 미검증. 배포 결과와 변경 파일 전체 목록은 작업 공간 Plan/daybook_chronology-plan/Release_Report.md에 기록한다.
+
+## 2026-09-08 일관성·사용성 재검토
+
+빌드 `2026.09.08-consistency1`.
+
+- 6단계 글자 크기가 기록·Timeline·Markdown에도 적용되며 입력창·선택창·파일 선택창은 iOS 확대를 막기 위해 16px을 유지한다. 달력·앱 링크·상세보기 등 조작 대상은 44px 기준을 만족하도록 정리했다.
+- Chronological / By app과 Preview / Source의 선택 상태를 접근성 속성으로 표시한다. 클립보드 접근이 막히면 Markdown을 선택할 수 있는 대체 창을 연다.
+- Node 테스트 65개와 JavaScript 문법 검사 통과. 격리 Chromium에서 Today 종료 시각 수정의 즉시 반영, Markdown 다운로드, 6단계 글자 크기·4개 화면 크기, 복사 대체 창, Service Worker 오프라인 재실행을 확인했다. 페이지 오류는 없었다.
+- Browser plugin not available; bundled Playwright Chromium을 사용했다. 실제 iPhone/iPad Safari 및 실계정 비공개 Sync는 미검증이다.

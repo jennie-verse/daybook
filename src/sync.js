@@ -5,7 +5,7 @@ import { acknowledgeNote, cacheDay, getItem, mergeRemoteNote, preserveConflict, 
 import { webappDataConfig } from './deployment.js';
 const config = (token) => webappDataConfig(token);
 let modulesPromise;
-const modules = () => modulesPromise ||= Promise.all([import('../../shared/v1/sync.js'), import('../../shared/v2/journal.js')]).then(([v1, journal]) => ({ v1, journal }));
+const modules = () => modulesPromise ||= Promise.all([import('../../shared/v1/sync.js'), import('../../shared/v2/journal.js')]).then(([v1, journal]) => ({ v1, journal })).catch(error => { modulesPromise = null; throw error; });
 async function refreshJournalDay(date, token) {
   const cached = await readCachedDay(date);
   if (!token) return { ...(cached || { date, apps: Object.fromEntries(SOURCE_APPS.map(({ id }) => [id, []])), records: [] }), failures: SOURCE_APPS.map(({ id }) => id), cached: Boolean(cached), needsToken: true };

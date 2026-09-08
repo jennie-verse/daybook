@@ -24,7 +24,7 @@ const rememberedDate = () => { const saved = read('daybook.date', ''); return is
 // Updates never clear notes, queued changes, or saved settings.
 const state = {
   date: rememberedDate(), view: read('daybook.view', 'by-app'), token: read('sync.token.v1'), context: read('daybook.context'),
-  textSize: read('daybook.textSize', '12'), markdownDetail: read('daybook.markdownDetail', 'full'), markdownLayout: read('daybook.markdownLayout', 'chronological'), day: null, note: '', markdownSnapshotAt: null, statuses: {}, availability: new Map(), refreshing: false,
+  textSize: read('daybook.textSize', '12'), markdownDetail: read('daybook.markdownDetail', 'full'), markdownLayout: read('daybook.markdownLayout', 'chronological'), markdownMode: 'preview', day: null, note: '', markdownSnapshotAt: null, statuses: {}, availability: new Map(), refreshing: false,
 };
 let dayRequest = 0; let noteRevision = 0; let outboxBusy = false; let outboxRequested = false;
 const noteDrafts = new Map();
@@ -90,7 +90,7 @@ function renderMarkdown() {
   const layoutControls = node('div', 'markdown-layout segmented'); layoutControls.setAttribute('aria-label', 'Markdown ordering');
   for (const [value, label] of [['chronological', 'Chronological'], ['by-app', 'By app']]) { const choice = node('button', state.markdownLayout === value ? 'active' : '', label); choice.setAttribute('aria-pressed', String(state.markdownLayout === value)); choice.onclick = () => { state.markdownLayout = value; write('daybook.markdownLayout', value); invalidateMarkdownSnapshot(); render(); }; layoutControls.append(choice); }
   fragment.append(layoutControls, node('p', 'chronology-help', 'Chronological combines Today Timeline and app records. Same-browser Today records are read locally; other devices require Today Sync.'));
-  const output = node('div', 'markdown-output preview-mode'); const setMode = (mode) => { preview.classList.toggle('active', mode === 'preview'); source.classList.toggle('active', mode === 'source'); output.classList.toggle('preview-mode', mode === 'preview'); output.replaceChildren(); if (mode === 'source') output.append(node('pre', 'markdown-source', markdown())); else renderSafeMarkdownPreview(output, markdown()); }; preview.onclick = () => setMode('preview'); source.onclick = () => setMode('source'); setMode('preview'); fragment.append(output);
+  const output = node('div', 'markdown-output preview-mode'); const setMode = (mode) => { state.markdownMode = mode; preview.setAttribute('aria-pressed', String(mode === 'preview')); source.setAttribute('aria-pressed', String(mode === 'source')); preview.classList.toggle('active', mode === 'preview'); source.classList.toggle('active', mode === 'source'); output.classList.toggle('preview-mode', mode === 'preview'); output.replaceChildren(); if (mode === 'source') output.append(node('pre', 'markdown-source', markdown())); else renderSafeMarkdownPreview(output, markdown()); }; preview.onclick = () => setMode('preview'); source.onclick = () => setMode('source'); setMode(state.markdownMode); fragment.append(output);
   const actions = node('div', 'markdown-actions'); const copy = node('button', 'primary-button', 'Copy Markdown'); const download = node('button', '', 'Share / Download .md'); copy.onclick = copyMarkdown; download.onclick = downloadMarkdown; actions.append(copy, download); fragment.append(actions); return fragment;
 }
 // Undo mdText's escaping (src/markdown.js) so the Preview never shows a
@@ -148,6 +148,7 @@ function setBanner() {
   else if (state.day?.failures?.length) { text = `Some sources could not be refreshed: ${state.day.failures.map((id) => SOURCE_BY_ID.get(id).label).join(', ')}.`; banner.classList.add('partial'); }
   else if (state.day?.timelineErrors?.length) { text = 'Today Timeline could not be fully refreshed. Available records are shown; try Refresh.'; banner.classList.add('partial'); }
   else if (state.day?.diagnostics?.length) { text = `${state.day.diagnostics.length} source file${state.day.diagnostics.length === 1 ? '' : 's'} could not be read. Other records are available.`; banner.classList.add('partial'); }
+  if (state.day?.timelineErrors?.length && !text.includes('Today Timeline')) { text += ' Today Timeline could not be fully refreshed. Try Refresh.'; banner.classList.add('partial'); }
   banner.textContent = text; banner.hidden = !text;
 }
 async function loadDay({ remote = true } = {}) {
@@ -241,7 +242,7 @@ async function flushOutbox() {
     }
   }
 }
-async function copyMarkdown() { try { await navigator.clipboard.writeText(markdown()); toast('Markdown copied'); } catch { toast('Copy is unavailable in this browser'); } }
+async function copyMarkdown() { try { await navigator.clipboard.writeText(markdown()); toast('Markdown copied'); } catch { const box = node('dialog', 'sheet-dialog'); const form = node('form'); const title = node('h2', '', 'Copy Markdown'); const help = node('p', 'help', 'Select and copy the text below. Clipboard access is unavailable.'); const text = node('textarea'); text.readOnly = true; text.value = markdown(); text.setAttribute('aria-label', 'Markdown to copy'); text.style.cssText = 'width:100%;min-height:240px;font-size:16px'; const close = node('button', '', 'Close'); close.type = 'button'; close.onclick = () => box.close(); form.append(title, help, text, close); box.append(form); document.body.append(box); box.addEventListener('close', () => box.remove(), {once:true}); box.showModal(); text.focus(); text.select(); } }
 function downloadText(content, name, type) { const link = document.createElement('a'); const url = URL.createObjectURL(new Blob([content], { type })); link.href = url; link.download = name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 0); }
 function downloadMarkdown() { downloadText(markdown(), `journal-${state.date}.md`, 'text/markdown;charset=utf-8'); toast('Markdown downloaded'); }
 async function renderStatuses() {
