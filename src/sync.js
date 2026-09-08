@@ -1,6 +1,6 @@
 import { SOURCE_APPS } from './sources.js';
 import { mergeSourceResults } from './merge.js';
-import { cacheDay, deleteItem, getItem, preserveConflict, putItem, readCachedDay } from './store.js';
+import { acknowledgeNote, cacheDay, getItem, mergeRemoteNote, preserveConflict, readCachedDay } from './store.js';
 import { webappDataConfig } from './deployment.js';
 const config = (token) => webappDataConfig(token);
 let modulesPromise;
@@ -44,14 +44,14 @@ export async function readRemoteNote(date, token) {
   notes.sort((a, b) => Date.parse(b.updatedAt || 0) - Date.parse(a.updatedAt || 0) || b.path.localeCompare(a.path)); return notes[0] || null;
 }
 export async function reconcileNote(date, token) {
-  const local = await getItem('notes', date); let remote = null; try { remote = await readRemoteNote(date, token); } catch { return local; } if (!remote) return local;
-  if (!local || Date.parse(remote.updatedAt) > Date.parse(local.updatedAt)) { if (local?.markdown && local.markdown !== remote.markdown) await preserveConflict(date, local); const item = { key: date, date, markdown: remote.markdown, updatedAt: remote.updatedAt }; await putItem('notes', item); return item; }
-  if (local.markdown !== remote.markdown) await preserveConflict(date, remote); return local;
+  let remote = null;
+  try { remote = await readRemoteNote(date, token); } catch { /* use the latest local note */ }
+  return remote ? mergeRemoteNote(date, remote) : getItem('notes', date);
 }
 export async function flushNote(date, token, context) {
   const pending = await getItem('outbox', date); if (!pending || !token || !context || !navigator.onLine) return false; const { v1, journal } = await modules(); const path = journal.notePath(date, context);
   for (let attempt = 0; attempt < 4; attempt += 1) {
-    try { const current = await v1.readFile(config(token), path); let existing = null; try { existing = current.exists ? JSON.parse(current.content) : null; } catch { existing = null; } if (existing?.markdown && existing.markdown !== pending.markdown && Date.parse(existing.updatedAt || 0) > Date.parse(pending.updatedAt)) await preserveConflict(date, { ...existing, date }); const body = `${JSON.stringify({ v: 1, context, date, updatedAt: pending.updatedAt, markdown: pending.markdown }, null, 2)}\n`; await v1.writeFile(config(token), path, body, { ...(current.sha ? { sha: current.sha } : {}), message: `journal: update daily note ${date}` }); await deleteItem('outbox', date); return true; } catch (error) { if (error?.type !== 'conflict' || attempt === 3) throw error; }
+    try { const current = await v1.readFile(config(token), path); let existing = null; try { existing = current.exists ? JSON.parse(current.content) : null; } catch { existing = null; } if (existing?.markdown && existing.markdown !== pending.markdown && Date.parse(existing.updatedAt || 0) > Date.parse(pending.updatedAt)) await preserveConflict(date, { ...existing, date }); const body = `${JSON.stringify({ v: 1, context, date, updatedAt: pending.updatedAt, markdown: pending.markdown }, null, 2)}\n`; await v1.writeFile(config(token), path, body, { ...(current.sha ? { sha: current.sha } : {}), message: `journal: update daily note ${date}` }); return acknowledgeNote(date, pending); } catch (error) { if (error?.type !== 'conflict' || attempt === 3) throw error; }
   }
   return false;
 }

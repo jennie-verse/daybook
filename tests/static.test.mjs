@@ -97,7 +97,9 @@ test('the bundled font ships its licence', () => {
 test('the cache version moved with the shipped files', () => {
   // cache-first: leaving the version alone leaves installed devices on the old
   // files for ever.
-  assert.match(read('sw.js'), /const VERSION = '2026.09.05-initial';/);
+  const version = read('src/version.js').match(/APP_BUILD = ["']([^"']+)["']/)?.[1];
+  assert.ok(version);
+  assert.ok(read('sw.js').includes(`const VERSION = '${version}';`));
 });
 
 test('account-portable settings report custom-domain sync configuration failures', () => {
