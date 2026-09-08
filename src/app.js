@@ -25,7 +25,7 @@ const state = {
   date: rememberedDate(), view: read('daybook.view', 'by-app'), token: read('sync.token.v1'), context: read('daybook.context'),
   textSize: read('daybook.textSize', '12'), markdownDetail: read('daybook.markdownDetail', 'full'), day: null, note: '', markdownSnapshotAt: null, statuses: {}, availability: new Map(), refreshing: false,
 };
-let dayRequest = 0; let noteRevision = 0; let outboxBusy = false;
+let dayRequest = 0; let noteRevision = 0; let outboxBusy = false; let outboxRequested = false;
 const noteDrafts = new Map();
 let noteTimer = null; let composing = false; let toastTimer = null; let lastRemoteRefreshAt = 0; let resumeTimer = null;
 const node = (tag, className, text) => { const element = document.createElement(tag); if (className) element.className = className; if (text !== undefined) element.textContent = text; return element; };
@@ -204,7 +204,8 @@ async function persistNote() {
  * still read "waiting to sync".
  */
 async function flushOutbox() {
-  if (!state.token || !state.context || !navigator.onLine || outboxBusy) return;
+  if (!state.token || !state.context || !navigator.onLine) return;
+  if (outboxBusy) { outboxRequested = true; return; }
   outboxBusy = true;
   try {
   for (const item of await listItems('outbox')) {
@@ -212,7 +213,13 @@ async function flushOutbox() {
     try { if (await flushNote(date, state.token, state.context) && date === state.date) $('note-status').textContent = 'Synced privately'; }
     catch (error) { if (error?.type === 'configuration' && date === state.date) $('note-status').textContent = 'Saved on this device · sync unavailable on this domain'; /* stays queued for the next attempt */ }
   }
-  } finally { outboxBusy = false; }
+  } finally {
+    outboxBusy = false;
+    if (outboxRequested) {
+      outboxRequested = false;
+      clearTimeout(noteTimer); noteTimer = setTimeout(() => flushOutbox(), 0);
+    }
+  }
 }
 async function copyMarkdown() { try { await navigator.clipboard.writeText(markdown()); toast('Markdown copied'); } catch { toast('Copy is unavailable in this browser'); } }
 function downloadText(content, name, type) { const link = document.createElement('a'); const url = URL.createObjectURL(new Blob([content], { type })); link.href = url; link.download = name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 0); }

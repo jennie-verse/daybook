@@ -63,3 +63,21 @@ test('unreadable local notes stay protected from accidental blank overwrites',as
   assert.equal(h.$('note-text').disabled,true);
   assert.match(h.$('note-status').textContent,/Could not load/);
 });
+
+test('a sync request made during a slow upload is drained after that upload finishes', async () => {
+  const h = harness(); const upload = deferred(); const timers = []; let uploads = 0;
+  h.context.navigator.onLine = true;
+  h.run("state.token = 'test'; state.context = 'test-context'");
+  h.context.listItems = async () => [{ date: h.run('state.date') }];
+  h.context.flushNote = async () => { uploads++; if (uploads === 1) await upload.promise; return true; };
+  h.context.setTimeout = fn => { timers.push(fn); return timers.length; };
+  const first = h.run('flushOutbox()');
+  await new Promise(resolve => setImmediate(resolve));
+  await h.run('flushOutbox()');
+  assert.equal(uploads, 1);
+  upload.resolve(); await first;
+  assert.equal(timers.length, 1);
+  await timers.shift()();
+  assert.equal(uploads, 2);
+  assert.equal(timers.length, 0);
+});
