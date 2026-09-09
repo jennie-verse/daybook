@@ -4,7 +4,10 @@
 *{box-sizing:border-box}
 body{margin:0;min-width:320px;background:linear-gradient(180deg,#fff 0,var(--paper) 180px);-webkit-font-smoothing:antialiased}
 button,input,select,textarea{font:inherit;color:inherit}button,a{touch-action:manipulation}
-button{min-height:44px;border:0;background:transparent;cursor:pointer;display:inline-flex;align-items:center}
+button{position:relative;min-height:30px;border:0;background:transparent;cursor:pointer;display:inline-flex;align-items:center}
+/* Compact visible box, 44px tap area via a transparent overlay (House Style §5-1). */
+button::after{content:"";position:absolute;inset:-8px -4px}
+.bottom-nav button::after,.rail-tabs button::after,.source-status button::after{inset:0}
 button:disabled{opacity:.35;cursor:not-allowed}
 a{color:var(--rose-deep)}
 :focus-visible{outline:3px solid color-mix(in srgb,var(--rose-deep) 40%,transparent);outline-offset:2px}
@@ -77,7 +80,7 @@ dialog{padding:0;border:1px solid var(--line);border-radius:18px;background:var(
 @media(prefers-contrast:more){:root{--line:#cbbdc2;--muted:#65545b}.record-heading strong{font-weight:700}}
 
 /* Shared chronology for Timeline and Markdown. */
-.markdown-layout{width:fit-content;margin:12px 0;gap:4px}.markdown-layout button{min-height:44px}.markdown-layout button:after{inset:0}
+.markdown-layout{width:fit-content;margin:12px 0;gap:4px}
 .chronology-help{color:var(--muted);font-size:calc(var(--base-size) * 0.91667);line-height:1.65;overflow-wrap:anywhere}
 .unified-timeline{display:grid;gap:12px;margin:18px 0}.unified-entry{padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);min-width:0;overflow-wrap:anywhere}
 .unified-time{margin:0 0 9px;color:var(--rose-deep);font-size:calc(var(--base-size) * 0.91667);font-variant-numeric:tabular-nums;line-height:1.6}
@@ -86,16 +89,26 @@ dialog{padding:0;border:1px solid var(--line);border-radius:18px;background:var(
 
 /* Text scales independently of touch targets and iOS input zoom. */
 :root{color-scheme:light}
-button,.source-link,.record-details summary{min-width:44px;min-height:44px}
-.source-link,.record-details summary{display:inline-flex;align-items:center;justify-content:center}
-.record-details summary{max-width:100%;width:auto;padding:0 4px}
-.calendar-day{min-height:44px;justify-content:center}
-.segmented button{min-height:44px}.segmented button::after{inset:0}
-.field input,.field select,.daily-note textarea{font-size:16px}
-/* Keep editable controls at 16px regardless of the content density setting. */
-.field input,.field select{font-size:16px}
-.file-button input{font-size:16px}
-.icon-button{font-size:25px}.icon-button.small{font-size:17px}.book-mark{font-size:16px}
+/* Controls stay visually close to their label; a transparent ::after keeps the
+   44px tap area (House Style §5-1). Primary nav (bottom-nav) keeps a full box. */
+button{position:relative}
+.segmented button,.markdown-layout button{min-height:26px}
+.segmented button::after,.markdown-layout button::after{content:"";position:absolute;inset:-9px 0}
+.markdown-actions button,.button-row button,.actions-card button,.file-button,.primary-button{min-height:32px}
+.markdown-actions button::after,.button-row button::after,.actions-card button::after,.primary-button::after{content:"";position:absolute;inset:-6px -3px}
+.icon-button{width:36px;min-width:36px;height:36px;font-size:20px}
+.icon-button::after{content:"";position:absolute;inset:-5px}
+.icon-button.small{width:36px;min-width:36px;height:36px;font-size:15px}
+.today-button{min-height:34px;border-radius:16px}
+.today-button::after{content:"";position:absolute;inset:-4px -3px}
+.calendar-day{min-height:34px;justify-content:center}
+.source-link,.record-details summary{display:inline-flex;align-items:center;justify-content:center;min-width:0;min-height:0;padding:0 2px}
+.source-link::after,.record-details summary::after{content:"";position:absolute;inset:-12px -6px}
+.source-link,.record-details summary{position:relative}
+.record-details summary{max-width:100%;width:max-content}
+.field input,.field select,.daily-note textarea,.file-button input{font-size:16px}
+.field input,.field select{min-height:38px;font-size:16px}
+.icon-button.small{font-size:15px}.book-mark{font-size:16px}
 .section-heading,.source-heading>div,.freshness-row,.freshness-actions{flex-wrap:wrap}
 .field-row>.field,.source-status>*{min-width:0}.source-status{grid-template-columns:10px minmax(0,1fr);padding:8px 0}.source-status>:nth-child(n+3){grid-column:2;overflow-wrap:anywhere}
 .unified-time,.record-heading strong{font-size:var(--base-size)}
@@ -103,3 +116,5 @@ button,.source-link,.record-details summary{min-width:44px;min-height:44px}
    800-1039px tablets the way the old two-column .document (max 760px) did. */
 @media(min-width:800px) and (max-width:1039px){.view-host,.daily-note,.state-banner{max-width:760px;margin-inline:auto}}
 @media(max-width:410px){.date-row{grid-template-columns:44px minmax(0,1fr) 44px auto}.freshness-row{font-size:calc(var(--base-size) * .75)}.freshness-actions{gap:2px}.date-button strong{font-size:calc(var(--base-size) * 1.35)}}
+
+.date-row{grid-template-columns:36px minmax(0,1fr) 36px auto}
