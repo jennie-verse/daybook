@@ -39,9 +39,31 @@ export function chronologyRows(day) {
     return { record, id:`${record.app}:${record.id}`, start, end, scheduled, label, description:safeText(description), meaning, body };
   }).sort((a,b) => (a.start ? Date.parse(a.start) : Infinity) - (b.start ? Date.parse(b.start) : Infinity) || a.id.localeCompare(b.id));
 }
+// `timeZoneName: 'shortOffset'` needs Safari/iOS 16.4+; older engines throw. Fall
+// back to deriving the offset from the zoned wall time so the Timeline and the
+// chronological Markdown keep working (they just stop showing the offset suffix
+// on DST-boundary days, which older Safari cannot label anyway).
+let shortOffsetOK;
+export function zoneOffset(iso, zone) {
+  if (shortOffsetOK === undefined) {
+    try { new Intl.DateTimeFormat('en', { timeZone: 'UTC', timeZoneName: 'shortOffset' }); shortOffsetOK = true; }
+    catch { shortOffsetOK = false; }
+  }
+  if (shortOffsetOK) {
+    try {
+      return new Intl.DateTimeFormat('en', { timeZone: zone, timeZoneName: 'shortOffset' })
+        .formatToParts(new Date(iso)).find(p => p.type === 'timeZoneName')?.value || '';
+    } catch { /* fall through */ }
+  }
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(iso)).filter(x => x.type !== 'literal').map(x => [x.type, x.value]));
+  const wall = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
+  const mins = Math.round((wall - new Date(iso).getTime()) / 60000);
+  const h = Math.floor(Math.abs(mins) / 60), m = Math.abs(mins) % 60;
+  return `GMT${mins < 0 ? '-' : '+'}${h}${m ? ':' + String(m).padStart(2, '0') : ''}`;
+}
 export function rowTime(row, zone, date) {
   if (!row.start) return row.scheduled ? 'No activity time' : 'Time unknown';
-  const offset = iso => new Intl.DateTimeFormat('en', {timeZone:zone, timeZoneName:'shortOffset'}).formatToParts(new Date(iso)).find(p=>p.type==='timeZoneName').value;
+  const offset = iso => zoneOffset(iso, zone);
   const around = [-12,12].map(h=>offset(new Date(Date.parse(row.start)+h*3600000).toISOString()));
   const showOffset = around[0] !== around[1] || (row.end && offset(row.start) !== offset(row.end));
   const label = iso => `${clockAt(iso,zone,date)}${showOffset ? ` (${offset(iso)})` : ''}`;

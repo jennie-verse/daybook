@@ -57,19 +57,32 @@ export async function flushNote(date, token, context) {
   return false;
 }
 
+// Merge Today's timeline into an already-built journal `day`. Timeline problems
+// land in day.timelineErrors only (setBanner reports them on their own line) so
+// they never overwrite day.failures / day.diagnostics from the journal refresh.
+async function mergeTimeline(day, date, options) {
+  try {
+    const timeline = await readTodayTimeline(date, options);
+    day.apps.today = [...(day.apps.today || []).filter((r) => r.kind !== 'timeline-entry'), ...timeline.records];
+    day.records = Object.values(day.apps).flat().filter((r) => !r.deleted);
+    day.timelineErrors = timeline.errors;
+    await cacheDay(date, day);
+  } catch { day.timelineErrors = ['Today Timeline could not be refreshed. Cached records are shown.']; }
+  return day;
+}
+
 export async function refreshDay(date, token) {
   let day;
   try { day = await refreshJournalDay(date, token); }
   catch { day = await refreshJournalDay(date, ''); day.diagnostics = [{ app: 'journal', message: 'Journal refresh failed; cached records are shown.' }]; }
   let options = {};
   if (token) { try { options = { config: config(token), api: (await modules()).v1 }; } catch { /* journal reports configuration errors */ } }
-  try {
-    const timeline = await readTodayTimeline(date, options);
-    day.apps.today = [...(day.apps.today || []).filter(r => r.kind !== 'timeline-entry'), ...timeline.records];
-    day.records = Object.values(day.apps).flat().filter(r => !r.deleted);
-    day.timelineErrors = timeline.errors;
-    if (timeline.errors.length) day.diagnostics = [...(day.diagnostics || []), ...timeline.errors.map(message => ({ app: 'today', message }))];
-    await cacheDay(date, day);
-  } catch { day.timelineErrors = ['Today Timeline could not be refreshed. Cached records are shown.']; }
-  return day;
+  return mergeTimeline(day, date, options);
+}
+
+// Re-read only Today's timeline (same-browser BroadcastChannel nudge). Keeps the
+// existing journal day and its status; never runs a token-less journal refresh.
+export async function refreshTimeline(date, day) {
+  if (!day) return day;
+  return mergeTimeline(day, date, {});
 }

@@ -28,7 +28,8 @@ test('cross-midnight, mixed offsets and repeated DST clocks are explicit',()=>{
  const repeated=chronologyRows({records:[{...shower,data:{startedAt:'2026-11-01T01:30:00-05:00',endedAt:'2026-11-01T01:30:00-06:00'}}]})[0];assert.match(rowTime(repeated,zone,'2026-11-01'),/GMT-5.*GMT-6/);
 });
 test('chronological serializer preserves note; app layout remains available',()=>{
- const day={apps:{today:[shower]},records:[shower],failures:[]};const md=serializeMarkdown({day,date,note:'내 일기',layout:'chronological',timeZone:zone});assert.match(md,/## Timeline/);assert.match(md,/## Daily note\n\n내 일기/);assert.doesNotMatch(md,/## Today\n/);assert.match(serializeMarkdown({day,date}),/### Today activities/);
+ const day={apps:{today:[shower]},records:[shower],failures:[]};const md=serializeMarkdown({day,date,note:'내 일기',layout:'chronological',timeZone:zone});assert.match(md,/## Timeline/);assert.match(md,/## Daily note\n\n내 일기/);assert.doesNotMatch(md,/## Today\n/);
+ const byApp=serializeMarkdown({day,date});assert.match(byApp,/## Today activities/);assert.doesNotMatch(byApp,/### Today activities/);
 });
 function fixture(){
  const cache=new Map(),remote=new Map();let reads=0;

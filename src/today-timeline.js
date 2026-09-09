@@ -12,11 +12,17 @@ export function readLocalTimeline() {
     request.onblocked = () => reject(new Error('Close an older Today tab and refresh.'));
     request.onsuccess = () => {
       const db = request.result;
-      if (!db.objectStoreNames.contains('timelineEntries')) { db.close(); resolve([]); return; }
-      const tx = db.transaction(['timelineEntries', 'timelineConflicts'], 'readonly');
-      const a = tx.objectStore('timelineEntries').getAll(), b = tx.objectStore('timelineConflicts').getAll();
-      tx.oncomplete = () => { db.close(); resolve([...a.result, ...b.result].map(({ runningKey, ...r }) => r)); };
-      tx.onerror = tx.onabort = () => { db.close(); reject(tx.error || new Error('Today could not be read.')); };
+      try {
+        if (!db.objectStoreNames.contains('timelineEntries')) { db.close(); resolve([]); return; }
+        // A future Today schema might drop timelineConflicts; a missing store makes
+        // transaction() throw synchronously here, which would strand this promise.
+        const names = ['timelineEntries', ...(db.objectStoreNames.contains('timelineConflicts') ? ['timelineConflicts'] : [])];
+        const tx = db.transaction(names, 'readonly');
+        const a = tx.objectStore('timelineEntries').getAll();
+        const b = names.length > 1 ? tx.objectStore('timelineConflicts').getAll() : { result: [] };
+        tx.oncomplete = () => { db.close(); resolve([...a.result, ...b.result].map(({ runningKey, ...r }) => r)); };
+        tx.onerror = tx.onabort = () => { db.close(); reject(tx.error || new Error('Today could not be read.')); };
+      } catch (error) { db.close(); reject(error); }
     };
   });
 }
@@ -30,9 +36,10 @@ export function projectTimeline(entries, conflicts, date) {
 }
 async function collectTimeline(date, { config, api, local = readLocalTimeline, readCache = key => getItem('sourceFiles', key), saveCache = item => putItem('sourceFiles', item), getModel = model } = {}) {
   const key = 'today-timeline';
-  const cached = await readCache(key);
-  let rows = cached?.rows || [], files = { ...(cached?.files || {}) };
   const errors = [];
+  let cached = null;
+  try { cached = await readCache(key); } catch { errors.push('Cached Today Timeline could not be read on this device.'); }
+  let rows = cached?.rows || [], files = { ...(cached?.files || {}) };
   try { rows = [...rows, ...await local()]; } catch (error) { errors.push(error.message); }
   let contract;
   try { if (rows.length || config) contract = await getModel(); } catch { errors.push('Today Timeline reader is unavailable. Open Today online, then refresh.'); }

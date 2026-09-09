@@ -3,7 +3,7 @@ import { SOURCE_APPS, SOURCE_BY_ID } from './sources.js';
 import { fileAppRecords, folioGroups, petalGroups, recordBody, recordMeta, sourceSummary, timeLabel, visibleSections } from './day-model.js';
 import { serializeMarkdown } from './markdown.js';
 import { backupData, clearStore, deleteItem, getCacheBytes, listItems, readLocalNote, restoreData, saveLocalNote } from './store.js';
-import { flushNote, readSourceStatuses, reconcileNote, refreshDay } from './sync.js';
+import { flushNote, readSourceStatuses, reconcileNote, refreshDay, refreshTimeline } from './sync.js';
 import { APP_BUILD } from './version.js';
 
 const $ = (id) => document.getElementById(id);
@@ -28,7 +28,7 @@ const state = {
 };
 let dayRequest = 0; let noteRevision = 0; let outboxBusy = false; let outboxRequested = false;
 const noteDrafts = new Map();
-let noteTimer = null; let composing = false; let toastTimer = null; let lastRemoteRefreshAt = 0; let resumeTimer = null;
+let noteTimer = null; let composing = false; let toastTimer = null; let lastRemoteRefreshAt = 0; let resumeTimer = null; let timelineTimer = null;
 const node = (tag, className, text) => { const element = document.createElement(tag); if (className) element.className = className; if (text !== undefined) element.textContent = text; return element; };
 function toast(message) { $('toast').textContent = message; $('toast').classList.add('visible'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').classList.remove('visible'), 2600); }
 function updateDateHeader() {
@@ -145,10 +145,14 @@ function setBanner() {
   if (!state.token) { text = state.day?.cached ? 'Not connected · showing cached data' : 'Connect your private repository in Settings to load journal activity.'; banner.classList.add('warning'); }
   else if (!navigator.onLine) { text = 'Offline · cached data. Daily note changes will sync when you reconnect.'; banner.classList.add('offline'); }
   else if (state.day?.configurationError) { text = state.day.configurationError; banner.classList.add('warning'); }
-  else if (state.day?.failures?.length) { text = `Some sources could not be refreshed: ${state.day.failures.map((id) => SOURCE_BY_ID.get(id).label).join(', ')}.`; banner.classList.add('partial'); }
-  else if (state.day?.timelineErrors?.length) { text = 'Today Timeline could not be fully refreshed. Available records are shown; try Refresh.'; banner.classList.add('partial'); }
-  else if (state.day?.diagnostics?.length) { text = `${state.day.diagnostics.length} source file${state.day.diagnostics.length === 1 ? '' : 's'} could not be read. Other records are available.`; banner.classList.add('partial'); }
-  if (state.day?.timelineErrors?.length && !text.includes('Today Timeline')) { text += ' Today Timeline could not be fully refreshed. Try Refresh.'; banner.classList.add('partial'); }
+  else {
+    // Partial states can co-occur — report every one, don't let one shadow another.
+    const parts = [];
+    if (state.day?.failures?.length) parts.push(`Some sources could not be refreshed: ${state.day.failures.map((id) => SOURCE_BY_ID.get(id).label).join(', ')}.`);
+    if (state.day?.diagnostics?.length) parts.push(`${state.day.diagnostics.length} source file${state.day.diagnostics.length === 1 ? '' : 's'} could not be read. Other records are available.`);
+    if (state.day?.timelineErrors?.length) parts.push('Today Timeline could not be fully refreshed. Available records are shown; try Refresh.');
+    if (parts.length) { text = parts.join(' '); banner.classList.add('partial'); }
+  }
   banner.textContent = text; banner.hidden = !text;
 }
 async function loadDay({ remote = true } = {}) {
@@ -284,7 +288,12 @@ function bind() {
   $('clear-cache').onclick = async () => { if (!confirm('Clear the activity cache on this device? Nothing on other devices or in Journal is affected.')) return; await clearStore('days'); await clearStore('sourceFiles'); $('cache-size').textContent = 'Activity cache: cleared'; toast('Activity cache cleared'); };
   $('download-backup').onclick = async () => downloadText(JSON.stringify(await backupData(state), null, 2), `daybook-backup-${today()}.json`, 'application/json');
   $('restore-backup').onchange = async (event) => { try { const file = event.target.files[0]; event.target.value = ''; if (!file) return; const payload = JSON.parse(await file.text()); if (!confirm('Restore this backup? Notes on this device that share a date with the backup will be overwritten.')) return; const settings = await restoreData(payload); if (settings.textSize) { state.textSize = settings.textSize; write('daybook.textSize', state.textSize); } if (settings.markdownDetail) { state.markdownDetail = settings.markdownDetail; write('daybook.markdownDetail', state.markdownDetail); } if (settings.markdownLayout) { state.markdownLayout = settings.markdownLayout; write('daybook.markdownLayout', state.markdownLayout); } toast('Backup restored'); await loadDay({ remote: false }); } catch { toast('This is not a valid Daybook backup'); } };
-  if (typeof BroadcastChannel !== 'undefined') { const timelineChannel = new BroadcastChannel('today-timeline'); timelineChannel.onmessage = () => { clearTimeout(resumeTimer); resumeTimer = setTimeout(() => loadDay({ remote: false }), 250); }; }
+  if (typeof BroadcastChannel !== 'undefined') {
+    const timelineChannel = new BroadcastChannel('today-timeline');
+    // Same-browser Today edit: re-read just its timeline, keep the journal day and
+    // its status. Its own timer so it can't cancel a pending genuine remote refresh.
+    timelineChannel.onmessage = () => { clearTimeout(timelineTimer); timelineTimer = setTimeout(async () => { if (!state.day) return; await refreshTimeline(state.date, state.day); invalidateMarkdownSnapshot(); setBanner(); render(); }, 250); };
+  }
   window.addEventListener('online', async () => { setBanner(); await flushOutbox(); await loadDay(); }); window.addEventListener('offline', () => { setBanner(); render(); });
   const refreshOnResume = () => { if (document.visibilityState === 'hidden' || Date.now() - lastRemoteRefreshAt <= 60_000) return; clearTimeout(resumeTimer); resumeTimer = setTimeout(() => loadDay(), 250); };
   window.addEventListener('pageshow', refreshOnResume); document.addEventListener('visibilitychange', refreshOnResume);

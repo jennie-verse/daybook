@@ -98,5 +98,8 @@ button,.source-link,.record-details summary{min-width:44px;min-height:44px}
 .icon-button{font-size:25px}.icon-button.small{font-size:17px}.book-mark{font-size:16px}
 .section-heading,.source-heading>div,.freshness-row,.freshness-actions{flex-wrap:wrap}
 .field-row>.field,.source-status>*{min-width:0}.source-status{grid-template-columns:10px minmax(0,1fr);padding:8px 0}.source-status>:nth-child(n+3){grid-column:2;overflow-wrap:anywhere}
-.markdown-output,.unified-time,.record-heading strong{font-size:var(--base-size)}
+.unified-time,.record-heading strong{font-size:var(--base-size)}
+/* Single-column layout starts at 1039px now; keep a readable measure on
+   800-1039px tablets the way the old two-column .document (max 760px) did. */
+@media(min-width:800px) and (max-width:1039px){.view-host,.daily-note,.state-banner{max-width:760px;margin-inline:auto}}
 @media(max-width:410px){.date-row{grid-template-columns:44px minmax(0,1fr) 44px auto}.freshness-row{font-size:calc(var(--base-size) * .75)}.freshness-actions{gap:2px}.date-button strong{font-size:calc(var(--base-size) * 1.35)}}

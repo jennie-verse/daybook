@@ -360,7 +360,7 @@ function quill(records) {
 }
 
 export function serializeMarkdown({ day, date, note = '', detail = 'full', layout = 'by-app', timeZone, snapshotAt = new Date() }) {
-  const status = day.cached ? 'cached' : day.failures?.length ? 'partial' : 'complete';
+  const status = day.cached ? 'cached' : (day.failures?.length || day.timelineErrors?.length) ? 'partial' : 'complete';
   const parsedDate = new Date(`${date}T12:00:00`);
   const title = Number.isNaN(parsedDate.getTime()) ? date : parsedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
   const snapshot = snapshotAt instanceof Date ? snapshotAt : new Date(snapshotAt);
@@ -372,7 +372,7 @@ export function serializeMarkdown({ day, date, note = '', detail = 'full', layou
   const sections = layout === 'chronological' ? [chronologicalMarkdown(day, date, { detail, timeZone }), `## Daily note\n\n${safeText(note)}`.trimEnd()] : [
     focus(day.apps?.focus || []),
     today(day.apps?.today || []),
-    (day.apps?.today || []).some(r => r.kind === 'timeline-entry') ? chronologicalMarkdown({ records: day.apps.today.filter(r => r.kind === 'timeline-entry') }, date, { detail, timeZone }).replace('## Timeline', '### Today activities') : '',
+    (day.apps?.today || []).some(r => r.kind === 'timeline-entry') ? chronologicalMarkdown({ records: day.apps.today.filter(r => r.kind === 'timeline-entry') }, date, { detail, timeZone }).replace('## Timeline', '## Today activities') : '',
     folio(day.apps?.folio || [], full),
     petal(day.apps?.petal || [], full),
     cove(day.apps?.cove || [], full),
