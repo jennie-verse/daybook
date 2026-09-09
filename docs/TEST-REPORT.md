@@ -79,3 +79,12 @@
 - **로컬 읽기**: `readLocalTimeline`의 `onsuccess` 본문을 try/catch로 감싸 향후 Today 스키마에서 store가 사라져도 promise가 멈추지 않는다. `collectTimeline`은 캐시 읽기 실패도 견딘다.
 - **CSS**: 말미에 덧붙은 규칙이 모바일 `.markdown-output` 축소를 덮어쓰던 것을 제거했다. 800–1039px 태블릿에서 본문 폭을 760px로 제한한다.
 - Node 테스트 65개와 JavaScript 문법 검사 통과. 격리 Chromium에서 Timeline/Markdown 두 레이아웃, `shortOffset` 미지원 폴백, `refreshTimeline`이 `failures`/`diagnostics`를 보존함을 확인했다. 공개 배포 후 두 화면과 오프라인 동작에 페이지 오류 없음. 실제 iPhone/iPad Safari와 실계정 비공개 Sync는 미검증.
+
+## 2026-09-08 컨트롤 크기 정리 (reviewfix2)
+
+빌드 `2026.09.08-reviewfix2`. 같은 피드백에 따라 `consistency1`의 전역 `button{min-height:44px}`와 개별 44px 강제를 걷어내고, 작은 시각 상자 + 투명 `::after` 44px 탭 영역으로 통일했다.
+
+- 전역 `button` 최소 높이 30px + `::after` 탭 영역. bottom-nav·rail-tabs·source-status는 전체 상자 유지.
+- Preview/Source·Chronological/By app 세그먼트 26px, Markdown/기본 액션 32px, 아이콘 버튼 36px, Today pill 34px, 달력 칸 34px, 소스 링크·상세보기 요약은 글자 크기까지 축소.
+- 헤더 화살표 그리드 폭 36px. 입력·선택창은 16px 유지(iOS 확대 방지).
+- `elementFromPoint`로 세그먼트·레이아웃 토글·아이콘 버튼 44px 탭 영역 확인. 6단계 글자 크기(6·8·17px)×By app/Timeline/Markdown에서 가로 넘침 없음. 자동 테스트 65개 통과. 공개 배포본 CSS 해시 로컬 일치, Timeline·Markdown 화면 콘솔 오류 0.
