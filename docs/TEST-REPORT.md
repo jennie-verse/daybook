@@ -67,3 +67,15 @@
 - Chronological / By app과 Preview / Source의 선택 상태를 접근성 속성으로 표시한다. 클립보드 접근이 막히면 Markdown을 선택할 수 있는 대체 창을 연다.
 - Node 테스트 65개와 JavaScript 문법 검사 통과. 격리 Chromium에서 Today 종료 시각 수정의 즉시 반영, Markdown 다운로드, 6단계 글자 크기·4개 화면 크기, 복사 대체 창, Service Worker 오프라인 재실행을 확인했다. 페이지 오류는 없었다.
 - Browser plugin not available; bundled Playwright Chromium을 사용했다. 실제 iPhone/iPad Safari 및 실계정 비공개 Sync는 미검증이다.
+
+## 2026-09-08 검토 반영 (reviewfix)
+
+빌드 `2026.09.08-reviewfix1`. 다중 에이전트 코드 검토에서 확인된 항목을 수정했다.
+
+- **BroadcastChannel**: 같은 브라우저의 Today Timeline 편집 알림을 받았을 때 토큰 없는 Journal 재조회를 돌리지 않고, 새 `refreshTimeline()`으로 Today Timeline만 다시 읽어 Journal 하루와 상태를 유지한다. 토큰이 있는 사용자에게 "모든 소스 실패" 배너가 잘못 뜨거나 캐시가 오염되던 문제를 해결했다. 진행 중인 원격 새로고침을 취소하지 않도록 타이머를 분리했다.
+- **배너**: 동시에 발생한 부분 실패(소스 실패·파일 읽기 실패·Timeline 실패)를 함께 표시한다. Timeline 오류를 `day.diagnostics`에 중복 복사하지 않는다.
+- **시간대 오프셋**: `Intl` `timeZoneName: 'shortOffset'` 지원을 감지하고, 미지원 환경(iOS 16.4 미만)에서는 오프셋을 산술로 계산해 Timeline과 기본 Chronological Markdown이 계속 동작한다(GMT±H[:MM] 형식 일치 확인).
+- **Markdown**: Timeline 읽기가 부분 실패면 front matter `status`를 `partial`로 표기한다. By app 레이아웃의 Today 활동 소절 제목을 고아 `### ` 대신 `## Today activities`(H2)로 낸다.
+- **로컬 읽기**: `readLocalTimeline`의 `onsuccess` 본문을 try/catch로 감싸 향후 Today 스키마에서 store가 사라져도 promise가 멈추지 않는다. `collectTimeline`은 캐시 읽기 실패도 견딘다.
+- **CSS**: 말미에 덧붙은 규칙이 모바일 `.markdown-output` 축소를 덮어쓰던 것을 제거했다. 800–1039px 태블릿에서 본문 폭을 760px로 제한한다.
+- Node 테스트 65개와 JavaScript 문법 검사 통과. 격리 Chromium에서 Timeline/Markdown 두 레이아웃, `shortOffset` 미지원 폴백, `refreshTimeline`이 `failures`/`diagnostics`를 보존함을 확인했다. 공개 배포 후 두 화면과 오프라인 동작에 페이지 오류 없음. 실제 iPhone/iPad Safari와 실계정 비공개 Sync는 미검증.
