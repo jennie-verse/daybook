@@ -165,6 +165,7 @@ function today(records) {
       type: todayEntryType(task?.data?.type),
       scheduledAt: task?.at,
       hasTime: task?.data?.hasTime === true,
+      soon: task?.data?.soon === true,
     });
   });
   tasks.forEach((task, id) => {
@@ -176,6 +177,7 @@ function today(records) {
       type: todayEntryType(task.data?.type),
       scheduledAt: task.at,
       hasTime: task.data?.hasTime === true,
+      soon: task.data?.soon === true,
     });
   });
   const out = ['## Today'];
@@ -207,7 +209,11 @@ function today(records) {
       // Today but not done by the time it's read is treated as cancelled
       // for that day, not left open (the app itself still shows it as
       // open/pending — this only affects the day's journal rendering).
-      out.push(entry.done ? `- [x] ${mdText(entry.title)}` : `- [-] ~~${mdText(entry.title)}~~`);
+      // A "soon" task (today's soon-tag, kept visible instead of Someday so
+      // it isn't forgotten) is the deliberate exception — it's expected to
+      // roll forward unfinished, so it renders as plain open [ ] rather than
+      // cancelled [-] ~~strike~~.
+      out.push(entry.done ? `- [x] ${mdText(entry.title)}` : entry.soon ? `- [ ] ${mdText(entry.title)}` : `- [-] ~~${mdText(entry.title)}~~`);
     });
   }
   return out.length > 1 ? out.join('\n') : '';
