@@ -166,6 +166,7 @@ function today(records) {
       scheduledAt: task?.at,
       hasTime: task?.data?.hasTime === true,
       soon: task?.data?.soon === true,
+      canceled: task?.data?.canceled === true,
     });
   });
   tasks.forEach((task, id) => {
@@ -178,6 +179,7 @@ function today(records) {
       scheduledAt: task.at,
       hasTime: task.data?.hasTime === true,
       soon: task.data?.soon === true,
+      canceled: task.data?.canceled === true,
     });
   });
   const out = ['## Today'];
@@ -204,7 +206,11 @@ function today(records) {
       // No time set (all-day, e.g. a birthday) shows the plain 00:00
       // placeholder instead of running the fallback instant through
       // formatClock, which would otherwise print a misleading 12/24h clock.
-      if (entry.type === 'event') { out.push(`- ${entry.hasTime ? formatClock(entry.scheduledAt || entry.at) : '00:00'} ${mdText(entry.title)}`); return; }
+      if (entry.type === 'event') {
+        const label = entry.hasTime ? formatClock(entry.scheduledAt || entry.at) : '00:00';
+        out.push(entry.canceled ? `- ${label} ~~${mdText(entry.title)}~~` : `- ${label} ${mdText(entry.title)}`);
+        return;
+      }
       // A day's Markdown is a closed record of that day: a task added to
       // Today but not done by the time it's read is treated as cancelled
       // for that day, not left open (the app itself still shows it as

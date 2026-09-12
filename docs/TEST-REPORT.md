@@ -88,3 +88,11 @@
 - Preview/Source·Chronological/By app 세그먼트 26px, Markdown/기본 액션 32px, 아이콘 버튼 36px, Today pill 34px, 달력 칸 34px, 소스 링크·상세보기 요약은 글자 크기까지 축소.
 - 헤더 화살표 그리드 폭 36px. 입력·선택창은 16px 유지(iOS 확대 방지).
 - `elementFromPoint`로 세그먼트·레이아웃 토글·아이콘 버튼 44px 탭 영역 확인. 6단계 글자 크기(6·8·17px)×By app/Timeline/Markdown에서 가로 넘침 없음. 자동 테스트 65개 통과. 공개 배포본 CSS 해시 로컬 일치, Timeline·Markdown 화면 콘솔 오류 0.
+
+## 2026-09-12 Event 취소 표시 (eventcancel1)
+
+빌드 `2026.09.12-eventcancel1`. today 쪽에서 Task/Event에 새로 생긴 "Mark as Cancel"과, Event/Note가 자정에 더 이상 다음 날로 넘어가지 않고 그날 하루로 끝나도록 바뀐 것(자세한 내용은 today의 TEST-REPORT.md `markcancel1` 참고)에 맞춰 렌더링만 갱신했다.
+
+- Today 섹션에서 취소된(`data.canceled === true`) Event를 `- HH:MM ~~제목~~`로 취소선과 함께 표시한다(취소되지 않은 Event는 기존대로 취소선 없이 시간+제목만 표시). Task의 취소 표시는 이미 존재하던 "완료되지 않은 Today 항목은 취소로 본다"는 규칙(`[-] ~~제목~~`)과 시각적으로 동일해 별도 변경이 필요 없었다.
+- Note는 done/undone 구분 없이 항상 같은 형태(`- 제목`)로 표시하는 기존 방식을 그대로 유지했다(오늘 새로 정리한 표에서도 Note는 두 경우 모두 "기록"만 요구하고 별도 표시를 요구하지 않는다).
+- Node 테스트 65→66개 통과(취소된 Event와 취소되지 않은 Event가 나란히 있을 때 취소선이 취소된 것에만 붙는지 확인하는 테스트 추가). 공개 배포본 캐시 버전 이동 확인.

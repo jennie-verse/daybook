@@ -68,6 +68,17 @@ test('an Event with no scheduled time shows the 00:00 all-day placeholder and so
   assert.ok(output.indexOf('Friend birthday', addedIndex) < output.indexOf('Dentist', addedIndex), 'all-day event lists before the timed event');
 });
 
+test('a cancelled Event renders strikethrough with its time badge kept, and an uncancelled Event never strikes through', () => {
+  const today = [
+    { app: 'today', id: 'e-canceled', kind: 'task', at: '2026-08-31T14:30:00-05:00', updatedAt: '2026-08-31T14:30:00-05:00', title: 'Dentist', data: { done: false, type: 'event', hasTime: true, canceled: true } },
+    { app: 'today', id: 'e-open', kind: 'task', at: '2026-08-31T09:00:00-05:00', updatedAt: '2026-08-31T09:00:00-05:00', title: 'Standup', data: { done: false, type: 'event', hasTime: true, canceled: false } },
+  ];
+  const output = serializeMarkdown({ day: dayWith({ today }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
+  assert.match(output, /- 2:30 PM ~~Dentist~~/);
+  assert.match(output, /- 9:00 AM Standup/);
+  assert.doesNotMatch(output, /~~Standup~~/);
+});
+
 test('reading and usage apps export ranges and active duration only', () => {
   const started = '2026-08-31T13:10:00-05:00'; const ended = '2026-08-31T13:55:00-05:00';
   const output = serializeMarkdown({ day: dayWith({ folio: [session('folio', 'reading-session', 'Paper.pdf', started, ended, 2100)], cove: [session('cove', 'reading-session', 'Article', started, ended, 1800)], slate: [session('slate', 'usage-session', 'Research board', started, ended, 1200)], grove: [session('grove', 'usage-session', 'SQL map', started, ended, 900)] }), date: '2026-08-31', snapshotAt: '2026-08-31T18:00:00-05:00' });
