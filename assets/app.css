@@ -30,15 +30,16 @@ a{color:var(--rose-deep)}
 .record-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.record-heading strong{font-size:calc(var(--base-size) * 0.91667);font-weight:590;line-height:1.5;overflow-wrap:anywhere}.source-link{flex:0 0 auto;font-size:calc(var(--base-size) * 0.75);text-decoration:none}.record-meta{margin:4px 0 0;color:var(--muted);font-size:calc(var(--base-size) * 0.79167);line-height:1.55;text-transform:capitalize}
 .record-details{margin-top:8px;color:var(--muted)}.record-details summary{width:max-content;cursor:pointer;color:var(--rose-deep);font-size:calc(var(--base-size) * 0.75)}.record-details pre{margin:9px 0 0;padding:11px 13px;border-left:2px solid var(--rose-soft);background:color-mix(in srgb,var(--tint) 32%,transparent);color:var(--ink);font:inherit;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
 .book-group,.file-group{margin:15px 0 0 38px}.book-group h3,.file-group h3{margin:0;padding:10px 0 3px;color:var(--rose-deep);font-size:calc(var(--base-size) * 0.91667)}.book-group h3 span{color:var(--muted);font-weight:400}.book-group .record-row,.file-group .record-row{margin-left:0}
-.daily-note{padding:28px 34px 38px}.note-status{color:var(--muted);font-size:calc(var(--base-size) * 0.75)}.daily-note textarea{display:block;width:100%;min-height:154px;margin-top:14px;padding:16px;border:1px solid var(--line);border-radius:12px;resize:vertical;background:#fffdfd;line-height:1.6}.daily-note textarea::placeholder{color:var(--subtle)}
-/* .daily-note textarea's font-size used to be calc(var(--base-size) * 1.33333), but the
-   later, higher-specificity `.field input,.field select,.daily-note textarea,.file-button
-   input{font-size:16px}` rule below always won the cascade tie (same specificity, later in
-   source order), so Text Size never actually reached this box — it silently rendered at
-   16px regardless of the setting. Removed the dead declaration rather than fix the cascade,
-   since every other input/textarea in this app (and every other webapp in this project) is
-   intentionally fixed at 16px — the one real input Text Size was never meant to shrink below
-   16px anyway (iOS Safari auto-zooms on focus under that). See WebApp_House_Style.md 3장. */
+.daily-note{padding:28px 34px 38px}.note-status{color:var(--muted);font-size:calc(var(--base-size) * 0.75)}.daily-note textarea{display:block;width:100%;min-height:154px;margin-top:14px;padding:16px;border:1px solid var(--line);border-radius:12px;resize:vertical;background:#fffdfd;line-height:1.6;zoom:calc(var(--base-size) * 1.33333 / 16px)}.daily-note textarea::placeholder{color:var(--subtle)}
+/* Text Size now really does resize the note box, via `zoom` rather than
+   `font-size` — a plain <textarea> has no children (no images/tables that
+   `zoom` could wrongly scale, unlike folio's arbitrary HTML documents), so
+   `zoom` is the simplest correct tool here: unlike `transform`, it
+   participates in normal layout, so width:100%/resize:vertical keep working
+   with no extra compensation. The textarea's actual `font-size` stays fixed
+   at 16px (the rule below) so iOS Safari never auto-zooms on focus — Safari's
+   zoom-on-focus check reads the font-size CSS property itself, which `zoom`
+   does not change, only the rendered size. See WebApp_House_Style.md 3장. */
 .empty-state{padding:74px 20px 42px;text-align:center}.empty-icon{display:grid;place-items:center;width:52px;height:52px;margin:0 auto 17px;border-radius:18px;background:var(--tint);color:var(--rose-deep);font-size:calc(var(--base-size) * 1.66667)}.empty-state h2{margin:0 0 7px;font-size:calc(var(--base-size) * 1.33333)}.empty-state p{max-width:350px;margin:auto;color:var(--muted);line-height:1.65}
 .view-title{padding:14px 0 10px;border-bottom:1px solid var(--line)}.view-title h2{margin:2px 0 3px;font-size:calc(var(--base-size) * 1.25)}.view-title p{margin:0;color:var(--muted);font-size:calc(var(--base-size) * 0.83333)}.eyebrow{margin:0;color:var(--rose-deep);font-size:calc(var(--base-size) * 0.66667);font-weight:700;letter-spacing:.16em}
 .timeline{position:relative;padding:5px 0 22px}.timeline:before{content:"";position:absolute;top:9px;bottom:32px;left:66px;width:1px;background:var(--line)}
