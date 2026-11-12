@@ -1,4 +1,4 @@
-const VERSION = '2026.09.12-textsize2';
+const VERSION = '2026.11.12-foldable1';
 const CACHE = `daybook-${VERSION}`;
 const SHELL = [
   './', './index.html', './assets/app.css',

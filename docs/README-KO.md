@@ -5,6 +5,7 @@ Daybook은 Clip, Focus, Petal, Folio, Quill, Slate, Grove, Today, Cove가 privat
 - 라이브 URL: <https://jennie-verse.github.io/daybook/>
 - 일반 앱 기록은 Journal을 읽습니다. Today Timeline은 예외로 같은 브라우저의 IndexedDB를 읽기 전용으로 참조하고, 다른 기기 기록은 Today Sync 파일을 읽습니다.
 - Vault, Trace, Atlas, Shared 및 기존 `events/` 데이터는 활동 원본으로 사용하지 않습니다.
+- 접으면 폰·펼치면 태블릿 크기인 iPhone Duo와 Mac Safari에 맞춰 880px 이상에서 도구 레일이 본문 옆에 놓입니다.
 - Daily note는 기기에 즉시 저장되고, 연결되어 있으면 4초 뒤 private 저장소에 동기화됩니다.
 
 ## 시작

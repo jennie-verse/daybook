@@ -2,8 +2,8 @@
 @font-face{font-family:Lexend;src:url("./fonts/lexend-700.woff2") format("woff2");font-weight:600 800;font-display:swap}
 :root{--paper:#fdf7f8;--surface:#fff;--rose-soft:#efb3c1;--rose-deep:#8a4257;--tint:#fbe4ea;--ink:#4a3a40;--muted:#8a7780;--subtle:#b0a0a7;--line:#ede3e6;--success:#8ecfb4;--warning:#f0c193;--error:#de8580;--sky-tint:#e4f3f4;--sky-deep:#2f6b78;--mint-tint:#e4f4dc;--mint-deep:#3f7a52;--base-size:12px;font-family:Lexend,Verdana,"Trebuchet MS","Segoe UI",Arial,sans-serif;color:var(--ink);background:var(--paper);font-size:var(--base-size);font-synthesis:none}
 *{box-sizing:border-box}
-body{margin:0;min-width:320px;background:linear-gradient(180deg,#fff 0,var(--paper) 180px);-webkit-font-smoothing:antialiased}
-button,input,select,textarea{font:inherit;color:inherit}button,a{touch-action:manipulation}
+body{margin:0;min-width:320px;overscroll-behavior:none;background:linear-gradient(180deg,#fff 0,var(--paper) 180px);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}button,a,input,select,label,summary{touch-action:manipulation}
 button{position:relative;min-height:30px;border:0;background:transparent;cursor:pointer;display:inline-flex;align-items:center}
 /* Compact visible box, 44px tap area via a transparent overlay (House Style §5-1). */
 button::after{content:"";position:absolute;inset:-8px -4px}
@@ -56,7 +56,7 @@ a{color:var(--rose-deep)}
 .bottom-nav{display:none}
 dialog{padding:0;border:1px solid var(--line);border-radius:18px;background:var(--paper);color:var(--ink);box-shadow:0 28px 90px rgba(74,58,64,.18)}dialog::backdrop{background:rgba(64,48,54,.27);backdrop-filter:blur(3px)}dialog form{display:grid;gap:18px;padding:22px}.sheet-dialog{width:min(92vw,380px)}.settings-dialog{width:min(92vw,600px);max-height:min(88vh,760px)}.settings-dialog form{overflow:auto;max-height:inherit}.settings-dialog section{padding-top:15px;border-top:1px solid var(--line)}.settings-dialog h2,.settings-dialog h3{margin:0}.settings-dialog h2{font-size:calc(var(--base-size) * 1.66667)}.settings-dialog h3{font-size:calc(var(--base-size) * 1.0)}.dialog-heading{display:flex;align-items:flex-start;justify-content:space-between}.help{margin:7px 0 12px;color:var(--muted);font-size:calc(var(--base-size) * 0.75);line-height:1.6}.field{display:grid;gap:6px;margin-top:10px;color:var(--muted);font-size:calc(var(--base-size) * 0.75)}.field-row{display:flex;align-items:flex-end;gap:8px;margin-top:10px}.field-row .field{flex:1;margin-top:0}.conflict-item{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}.conflict-item:first-child{margin-top:0;padding-top:0;border-top:0}.field input,.field select{width:100%;min-height:44px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:#fff;font-size:calc(var(--base-size) * 1.33333)}.inline-status{display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-size:calc(var(--base-size) * 0.75)}.source-status-list{display:grid;margin-top:10px}.source-status{display:grid;grid-template-columns:10px 1fr auto auto;align-items:center;gap:8px;min-height:44px;border-top:1px solid color-mix(in srgb,var(--line) 70%,transparent);font-size:calc(var(--base-size) * 0.75)}.status-dot{width:7px;height:7px;border-radius:50%;background:var(--subtle)}.status-dot.ready{background:var(--success)}.status-dot.pending{background:var(--warning)}.status-dot.error{background:var(--error)}.status-dot.disabled{background:#c9c2c5}.file-button{display:flex;align-items:center;cursor:pointer}.file-button input{position:absolute;width:1px;height:1px;opacity:0;font-size:calc(var(--base-size) * 1.33333)}.settings-dialog pre{max-height:340px;overflow:auto;padding:14px;border-radius:10px;background:#fff;font:calc(var(--base-size) * 0.91667)/1.6 ui-monospace,monospace;white-space:pre-wrap}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));z-index:100;transform:translate(-50%,30px);padding:11px 15px;border-radius:12px;background:var(--ink);color:#fff;font-size:calc(var(--base-size) * 0.83333);opacity:0;pointer-events:none;transition:.2s}.toast.visible{transform:translate(-50%,0);opacity:1}
-@media(max-width:1039px){
+@media(max-width:879px){
   body{background:var(--paper)}
   .app-shell{display:block;width:100%;padding:0 0 calc(56px + env(safe-area-inset-bottom))}
   .document{border:0;border-radius:0;box-shadow:none;background:transparent}
@@ -121,9 +121,26 @@ button{position:relative}
 .section-heading,.source-heading>div,.freshness-row,.freshness-actions{flex-wrap:wrap}
 .field-row>.field,.source-status>*{min-width:0}.source-status{grid-template-columns:10px minmax(0,1fr);padding:8px 0}.source-status>:nth-child(n+3){grid-column:2;overflow-wrap:anywhere}
 .unified-time,.record-heading strong{font-size:var(--base-size)}
-/* Single-column layout starts at 1039px now; keep a readable measure on
-   800-1039px tablets the way the old two-column .document (max 760px) did. */
-@media(min-width:800px) and (max-width:1039px){.view-host,.daily-note,.state-banner{max-width:760px;margin-inline:auto}}
+/* Single-column layout now ends below 880px (the unfolded foldable gets the
+   side rail); keep a readable measure on 800-879px the way the old two-column .document (max 760px) did. */
+@media(min-width:800px) and (max-width:879px){.view-host,.daily-note,.state-banner{max-width:760px;margin-inline:auto}}
 @media(max-width:410px){.date-row{grid-template-columns:44px minmax(0,1fr) 44px auto}.freshness-row{font-size:calc(var(--base-size) * .75)}.freshness-actions{gap:2px}.date-button strong{font-size:calc(var(--base-size) * 1.35)}}
 
 .date-row{grid-template-columns:36px minmax(0,1fr) 36px auto}
+
+/* Foldable (iPhone Duo) unfolded 880-1119px: keep the tool rail beside the
+   journal, narrower than on a wide Mac window, instead of the phone layout. */
+@media(min-width:880px) and (max-width:1119px){
+  .app-shell{grid-template-columns:minmax(0,1fr) 272px;gap:18px;padding-left:max(18px,env(safe-area-inset-left));padding-right:max(18px,env(safe-area-inset-right))}
+  .day-header{padding-left:22px;padding-right:22px}.view-host,.daily-note{padding-left:22px;padding-right:22px}.state-banner{margin-left:22px;margin-right:22px}
+  .rail-card{padding:12px}
+}
+/* Wider dialogs when there is room (settings stays one readable column). */
+@media(min-width:760px){.settings-dialog{width:min(88vw,680px)}.sheet-dialog{width:min(80vw,420px)}}
+/* Mac / mouse only: hover feedback. Nothing depends on hover. */
+@media(hover:hover) and (pointer:fine){
+  .icon-button:hover,.today-button:hover,.text-button:hover,.markdown-actions button:hover,.button-row button:hover,.actions-card button:hover,.file-button:hover{background:var(--tint)}
+  .rail-tabs button:hover:not([aria-selected=true]),.calendar-day:hover:not(.selected),.segmented button:hover:not(.active),.date-button:hover,.record-details summary:hover{background:var(--tint)}
+  .primary-button:hover{filter:brightness(1.08)}
+  .source-link:hover{text-decoration:underline}
+}
