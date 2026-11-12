@@ -129,11 +129,14 @@ test('foldable/Mac layout: side rail from 880px, no overscroll bounce, hover onl
   const css = read('assets/app.css');
   assert.match(css, /@media\(max-width:879px\)\{/);
   assert.match(css, /@media\(min-width:880px\) and \(max-width:1119px\)\{[\s\S]*grid-template-columns:minmax\(0,1fr\) 272px/);
+  assert.ok(css.includes('@media (min-width: 640px) and (min-height: 560px)'));
+  assert.match(css, /@media \(min-width: 640px\) and \(min-height: 560px\)\{\.settings-dialog\{width:min\(88vw,680px\)/);
+  assert.match(css, /@media\(max-height:500px\) and \(max-width:900px\)\{/);
   assert.match(css, /overscroll-behavior:none/);
   assert.match(css, /@media\(hover:hover\) and \(pointer:fine\)/);
   assert.match(css, /touch-action:manipulation/);
   assert.match(css, /\.field input,\.field select,\.daily-note textarea,\.file-button input\{font-size:16px\}/);
   const stamp = read('src/version.js').match(/APP_BUILD = ["']([^"']+)["']/)[1];
-  assert.equal(stamp, '2026.11.12-foldable1');
+  assert.equal(stamp, '2026.11.12-foldable2');
   assert.equal(read('sw.js').match(/const VERSION = '([^']+)'/)[1], stamp);
 });
