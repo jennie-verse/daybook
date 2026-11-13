@@ -137,6 +137,8 @@ button{position:relative}
 }
 /* Wider dialogs when there is room (settings stays one readable column). */
 @media (min-width: 640px) and (min-height: 560px){.settings-dialog{width:min(88vw,680px)}.sheet-dialog{width:min(80vw,420px)}}
+/* Centered dialogs must stay clear of big top/bottom safe-area insets (iPhone Duo unfolded: ~82px / 34px); a no-op when the insets are 0. */
+@media (min-width: 640px) and (min-height: 560px){.settings-dialog{max-height:min(88vh,760px,calc(100dvh - 2 * max(env(safe-area-inset-top,0px),env(safe-area-inset-bottom,0px)) - 24px))}}
 /* Mac / mouse only: hover feedback. Nothing depends on hover. */
 @media(hover:hover) and (pointer:fine){
   .icon-button:hover,.today-button:hover,.text-button:hover,.markdown-actions button:hover,.button-row button:hover,.actions-card button:hover,.file-button:hover{background:var(--tint)}

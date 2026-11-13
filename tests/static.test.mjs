@@ -137,6 +137,13 @@ test('foldable/Mac layout: side rail from 880px, no overscroll bounce, hover onl
   assert.match(css, /touch-action:manipulation/);
   assert.match(css, /\.field input,\.field select,\.daily-note textarea,\.file-button input\{font-size:16px\}/);
   const stamp = read('src/version.js').match(/APP_BUILD = ["']([^"']+)["']/)[1];
-  assert.equal(stamp, '2026.11.12-foldable2');
+  assert.equal(stamp, '2026.11.12-foldable3');
   assert.equal(read('sw.js').match(/const VERSION = '([^']+)'/)[1], stamp);
+});
+
+test('Tier A settings dialog is capped below the top/bottom safe-area insets (centered, no-op at zero inset)', () => {
+  const css = read('assets/app.css');
+  assert.match(css, /@media \(min-width: 640px\) and \(min-height: 560px\)\{\.settings-dialog\{max-height:min\(88vh,760px,calc\(100dvh - 2 \* max\(env\(safe-area-inset-top,0px\),env\(safe-area-inset-bottom,0px\)\) - 24px\)\)\}\}/);
+  // phone base rule unchanged
+  assert.ok(css.includes('.settings-dialog{width:min(92vw,600px);max-height:min(88vh,760px)}'));
 });
